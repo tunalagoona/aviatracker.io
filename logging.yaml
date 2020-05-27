@@ -1,0 +1,25 @@
+version: 1
+
+formatters:
+    standard:
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+handlers:
+    file_handler:
+        class: logging.FileHandler
+        level: DEBUG
+        formatter: standard
+        filename: opensky_log.log
+        mode: a
+
+loggers:
+    main:
+        level: INFO
+        handlers: [file_handler]
+
+    get_states:
+        level: INFO
+
+root:
+    level: INFO
+    handlers: [file_handler]
