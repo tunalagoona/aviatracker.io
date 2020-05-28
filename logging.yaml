@@ -9,7 +9,7 @@ handlers:
         class: logging.FileHandler
         level: DEBUG
         formatter: standard
-        filename: opensky_log.log
+        filename: logger.log
         mode: a
 
 loggers:

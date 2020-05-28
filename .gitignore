@@ -1,4 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
-config.yaml
-opensky_log.log
+config.py
+logger.log
 .idea
+ft_venv
+test.py
