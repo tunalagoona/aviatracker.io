@@ -113,6 +113,7 @@ class PostgreSQL(object):
                     logger.debug(f'State vector upserted: {state_vector}')
                 connection.commit()
                 cur_time += 5
+
             cur.close()
 
         except (Exception, psycopg2.DatabaseError) as error:
