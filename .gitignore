@@ -1,6 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 config.py
-logger.log
+log.log
 .idea
 ft_venv
 test.py
