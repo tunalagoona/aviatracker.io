@@ -1,6 +1,11 @@
 from requests import get
 import config
 import json
+from typing import List, Dict
+
+
+State_vector = Dict
+State_vectors = List[State_vector]
 
 
 class StateVector(object):
@@ -19,15 +24,15 @@ class OpenskyStates(object):
         self.api_url = "https://opensky-network.org/api"
         self.url_operation = "/states/all"
 
-    def get_states(self, epoch_time=0, icao24=None):
+    def get_states(self, epoch_time=0, icao24=None) -> [State_vectors, int]:
         parameters = {"time": int(epoch_time), "icao24": icao24}
         r = get('{}{}'.format(self.api_url, self.url_operation), auth=self.auth, params=parameters, timeout=15)
         st = r.status_code
-        # if st == 200:
-        #     logger.info('Status_code is 200. Successful connection to Opensky API.')
-        # else:
-        #     logger.error(f'Could not connect to server. Status code is {st}')
-        #     return get_states(epoch_time=epoch_time)
-        if st != 200:
-            return get_states(epoch_time=epoch_time)
-        return json.loads(r.text)
+        if st == 200:
+            raw_states = json.loads(r.text)
+            request_time = raw_states["time"]
+            current_states = raw_states["states"]
+            states = [StateVector(st_vector=state, request_time=request_time).dict for state in current_states]
+        else:
+            return ['-', st]
+        return [states, st]

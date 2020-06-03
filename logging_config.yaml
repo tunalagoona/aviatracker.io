@@ -9,7 +9,7 @@ handlers:
         class: logging.FileHandler
         level: DEBUG
         formatter: standard
-        filename: log.log
+        filename: log_.log
         mode: a
 
 loggers:
