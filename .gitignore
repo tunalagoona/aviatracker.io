@@ -3,13 +3,4 @@ config.py
 log_.log
 .idea
 ft_venv
-OpenLayersProject
-flask_app
-test.py
-flight_tracker_app.py
-instance_folder
-
-
-
-
-
+__pycache__/

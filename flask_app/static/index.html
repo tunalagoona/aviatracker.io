@@ -1,0 +1,139 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Flight tracker</title>
+    <style>
+        html, body, #viewDiv {
+          padding: 0;
+          margin: 0;
+          height: 100%;
+          width: 100%;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
+            integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I="
+            crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.16/esri/themes/light/main.css">
+    <script src="https://js.arcgis.com/4.16/"></script>
+
+    <style>
+      html, body, #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+
+    <script type="text/javascript">
+        require([
+            "esri/Map",
+            "esri/views/MapView",
+            "esri/Graphic",
+            "esri/layers/GraphicsLayer"
+            ], function(Map, MapView, Graphic, GraphicsLayer) {
+
+                var map = new Map({
+                  basemap: "dark-gray-vector"
+                });
+
+                var view = new MapView({
+                  container: "viewDiv",
+                  map: map,
+                  center: [-50.80500, 34.02700], // longitude, latitude
+                  zoom: 2
+                });
+
+                graphicsLayer = new GraphicsLayer();
+                map.add(graphicsLayer);
+
+                var marker = {
+                    type: "picture-marker",
+                    url: "https://arcgis.github.io/arcgis-samples-javascript/sample-data/cat3.png",
+                    width: 30,
+                    height: 30
+                };
+
+                var points = {};
+                var attributes = {};
+                var popupTemplates = {};
+                var pointGraphics = {};
+
+                updateGraphics = function (vectors) {
+                    graphicsLayer.removeAll();
+
+                    var vectorQuantity = vectors.length;
+                    console.log("vectorQuantity: " + vectorQuantity);
+
+                    for (var i = 0; i < vectorQuantity; i ++) {
+                        points[vectors[i][1]] = {
+                            type: "point",
+                            longitude: vectors[i][6],
+                            latitude: vectors[i][7]
+                        };
+
+                        attributes[vectors[i][1]] = {
+                            Icao24: vectors[i][1],
+                            Callsign: vectors[i][2],
+                            Origin_country: vectors[i][3],
+                            Longitude: vectors[i][6],
+                            Latitude: vectors[i][7],
+                            Baro_altitude: vectors[i][8],
+                            Velocity: vectors[i][10],
+                            True_track: vectors[i][11],
+                            Vertical_rate: vectors[i][12],
+                            Geo_altitude: vectors[i][14]
+                        };
+
+                        popupTemplates[vectors[i][1]] = {
+                            title: "Aircraft information",
+                            content:
+                                `<ul><li>Icao24: ${attributes[vectors[i][1]].Icao24}</li>` +
+                                `<li>Callsign: ${attributes[vectors[i][1]].Callsign}</li>`
+                        };
+
+                        pointGraphics[vectors[i][1]] = new Graphic({
+                            geometry: points[vectors[i][1]],
+                            symbol: marker,
+                            attributes: attributes[vectors[i][1]],
+                            popupTemplate: popupTemplates[vectors[i][1]]
+                        });
+                    };
+
+                    for (var key in pointGraphics) {
+                        graphicsLayer.add(pointGraphics[key])
+                    };
+                };
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function(){
+            var socket = io();
+
+            socket.on('connect', data => {
+                console.log('client: connected');
+                socket.send('Client is ready');
+            });
+
+            socket.on('message', data => {
+                document.getElementById("ar_elem").innerHTML = "longitude of the first vector: " + data[0][6];
+                updateGraphics(data);
+            });
+        });
+    </script>
+
+</head>
+
+<body>
+    <h1>Flight tracker</h1>
+    <p></p>
+    <ul id="events"></ul>
+    <div id="ar_elem"></div>
+    <p></p>
+    <div id="viewDiv"></div>
+</body>
+
