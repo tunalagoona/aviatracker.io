@@ -4,3 +4,4 @@ log_.log
 .idea
 ft_venv
 __pycache__/
+/opensky_network_docs.txt

@@ -24,7 +24,7 @@ class OpenskyDataExtraction:
         if status_code == 200:
             logger.debug('Status_code is 200. Successful connection to Opensky API.')
         else:
-            logger.error(f'Could not connect to server. Status code is {st}')
+            logger.error(f'Could not connect to server. Status code is {status_code}')
             return self.get_state_vectors(cur_time)
         return states
 

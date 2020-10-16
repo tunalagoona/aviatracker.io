@@ -120,7 +120,6 @@
             });
 
             socket.on('message', data => {
-                document.getElementById("ar_elem").innerHTML = "longitude of the first vector: " + data[0][6];
                 updateGraphics(data);
             });
         });

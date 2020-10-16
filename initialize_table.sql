@@ -16,7 +16,8 @@ CREATE TABLE opensky_state_vectors (
     geo_altitude DOUBLE PRECISION,
     squawk TEXT,
     spi BOOLEAN,
-    position_source INTEGER
+    position_source INTEGER,
+    PRIMARY KEY (request_time, icao24)
 );
 
 

@@ -3,7 +3,7 @@ import time
 from contextlib import closing
 
 from flask import Flask
-from flask_socketio import SocketIO, send
+from flask_socketio import SocketIO
 import eventlet
 import psycopg2
 
@@ -43,7 +43,7 @@ def fetch_vectors():
                              "WHERE request_time = (SELECT MAX(request_time) FROM opensky_state_vectors);")
                 vectors = curs.fetchall()
                 inter_states[0] = vectors
-                print(inter_states)
+                # print(inter_states)
                 time.sleep(5)
 
 
