@@ -66,7 +66,7 @@
                     graphicsLayer.removeAll();
 
                     var vectorQuantity = vectors.length;
-                    console.log("vectorQuantity: " + vectorQuantity);
+                    console.log("vectorQuantity time = "+ vectors[0][0] + ": " + vectorQuantity);
 
                     for (var i = 0; i < vectorQuantity; i ++) {
                         points[vectors[i][1]] = {
@@ -116,7 +116,6 @@
 
             socket.on('connect', data => {
                 console.log('client: connected');
-                socket.send('Client is ready');
             });
 
             socket.on('message', data => {

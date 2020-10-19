@@ -18,7 +18,7 @@ class OpenskyDataExtraction:
     @staticmethod
     def get_state_vectors(cur_time: int) -> State_vectors:
         api = OpenskyStates()
-        api_response = api.get_states(epoch_time=cur_time)
+        api_response = api.get_states(time_sec=cur_time)
         states = api_response[0]
         status_code = api_response[1]
         if status_code == 200:
@@ -34,7 +34,13 @@ class OpenskyDataExtraction:
             with closing(DbConnection(dbname="opensky", user=config.pg_username, password=config.pg_password)) as db:
                 logger.info('Successful connection to the PostgreSQL database')
                 while True:
+                    print()
+                    print(f'cur_time for the request: {cur_time}')
                     states = self.get_state_vectors(cur_time)
+                    states_quantity = 0
+                    for _ in states:
+                        states_quantity += 1
+                    print('states quantity: ', states_quantity)
                     db.upsert_state_vectors(states)
                     # new cursor is created for a batch of states, transaction is committed after a batch upserted
                     logger.debug(f'State vectors upserted: {states}')

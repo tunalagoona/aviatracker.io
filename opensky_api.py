@@ -24,13 +24,14 @@ class OpenskyStates(object):
         self.api_url = "https://opensky-network.org/api"
         self.url_operation = "/states/all"
 
-    def get_states(self, epoch_time=0, icao24=None) -> [State_vectors, int]:
-        parameters = {"time": int(epoch_time), "icao24": icao24}
+    def get_states(self, time_sec=0, icao24=None) -> [State_vectors, int]:
+        parameters = {"time": int(time_sec), "icao24": icao24}
         r = get('{}{}'.format(self.api_url, self.url_operation), auth=self.auth, params=parameters, timeout=15)
         st = r.status_code
         if st == 200:
             raw_states = json.loads(r.text)
             request_time = raw_states["time"]
+            print('response time: ', request_time)
             current_states = raw_states["states"]
             states = [StateVector(st_vector=state, request_time=request_time).dict for state in current_states]
         else:
