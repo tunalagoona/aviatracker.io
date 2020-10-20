@@ -5,3 +5,5 @@ log_.log
 ft_venv
 __pycache__/
 /opensky_network_docs.txt
+/gitflow-installer.sh
+/gitflow/
