@@ -31,7 +31,6 @@ class OpenskyStates(object):
         if st == 200:
             raw_states = json.loads(r.text)
             request_time = raw_states["time"]
-            print('response time: ', request_time)
             current_states = raw_states["states"]
             states = [StateVector(st_vector=state, request_time=request_time).dict for state in current_states]
         else:

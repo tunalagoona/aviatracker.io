@@ -8,7 +8,7 @@ def setup(path='logging_config.yaml', level=logging.INFO):
         try:
             configurations = yaml.safe_load(f.read())
             logging.config.dictConfig(configurations)
-            print(f'Logging configurations implemented successfully.')
+            # print(f'Logging configurations implemented successfully.')
         except Exception as e:
             print(e)
             print('Error in Logging Configuration. Using default configs')

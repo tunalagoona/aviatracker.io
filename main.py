@@ -1,8 +1,7 @@
 import time
 import config
-import yaml
 import setup_logging as log
-from opensky_api import StateVector, OpenskyStates
+from opensky_api import OpenskyStates
 from database_update import DbConnection
 from psycopg2 import DatabaseError
 from contextlib import closing
@@ -35,12 +34,18 @@ class OpenskyDataExtraction:
                 logger.info('Successful connection to the PostgreSQL database')
                 while True:
                     print()
-                    print(f'cur_time for the request: {cur_time}')
+                    print(f'A request has been sent to API with req_time: {cur_time}')
+                    logger.info(f'A request has been sent to API with req_time: {cur_time}')
                     states = self.get_state_vectors(cur_time)
-                    states_quantity = 0
+                    state_vectors_quantity = 0
                     for _ in states:
-                        states_quantity += 1
-                    print('states quantity: ', states_quantity)
+                        state_vectors_quantity += 1
+                    resp_time = states[0]['request_time']
+                    print('API response time: ', resp_time)
+                    print(f'Quantity of state vectors received from API: {state_vectors_quantity}')
+                    logger.info(f'Quantity of state vectors received from API for the time {resp_time}:'
+                                f' {state_vectors_quantity}')
+                    logger.info('___')
                     db.upsert_state_vectors(states)
                     # new cursor is created for a batch of states, transaction is committed after a batch upserted
                     logger.debug(f'State vectors upserted: {states}')

@@ -9,7 +9,7 @@ handlers:
         class: logging.FileHandler
         level: DEBUG
         formatter: standard
-        filename: log_.log
+        filename: /Users/mas5mk/Work/Flight-tracker/flask_app/log_.log
         mode: a
 
 loggers:
