@@ -35,12 +35,6 @@ def disconnect():
     logger.info('A client has been disconnected from the server')
 
 
-@socketio.on_error_default
-def default_error_handler():
-    print(request.event["message"])
-    print(request.event["args"])
-
-
 inter_states = [0]
 
 
@@ -49,6 +43,7 @@ def fetch_vectors():
     with closing(psycopg2.connect(dbname="opensky", user='mas5mk', password='$GV9^MJGk8gn')) as conn:
         with conn.cursor() as curs:
             while True:
+                logger.info('Fetching from DB has started')
                 curs.execute("SELECT * FROM opensky_state_vectors "
                              "WHERE request_time = (SELECT MAX(request_time) FROM opensky_state_vectors);")
                 vectors = curs.fetchall()
