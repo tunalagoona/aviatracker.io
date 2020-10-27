@@ -5,7 +5,6 @@ import setup_logging as log
 
 from flask import Flask
 from flask_socketio import SocketIO
-from flask import request
 import eventlet
 import psycopg2
 
@@ -13,6 +12,7 @@ import psycopg2
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode='eventlet')
+logger = log.setup(path='../logging_config.yaml')
 
 eventlet.monkey_patch()
 
@@ -70,7 +70,6 @@ def start_app():
     eventlet.sleep(0.1)
 
 
-logger = log.setup(path='../logging_config.yaml')
 if __name__ == '__main__':
     fetching_thread = threading.Thread(target=fetch_vectors, daemon=True)
     fetching_thread.start()
