@@ -11,6 +11,8 @@ from psycopg2 import DatabaseError
 from contextlib import closing
 from typing import List, Dict
 
+import yappi
+
 
 State_vector = Dict
 State_vectors = List[State_vector]
@@ -22,7 +24,9 @@ class OpenskyDataExtraction:
     def get_state_vectors(cur_time: int) -> State_vectors:
         api = OpenskyStates()
         try:
+            logger.info(f'A request has been sent to API with req_time: {cur_time}')
             api_response = api.get_states(time_sec=cur_time)
+            logger.info(f'A response has been received from API for req_time: {cur_time}')
         except (OSError, requests.exceptions.ReadTimeout, socket.timeout):
             logger.error('Could not get state vectors from API ')
         states = api_response[0]
@@ -40,7 +44,6 @@ class OpenskyDataExtraction:
             with closing(DbConnection(dbname="opensky", user=config.pg_username, password=config.pg_password)) as db:
                 logger.info('Successful connection to the PostgreSQL database')
                 while True:
-                    logger.info(f'A request has been sent to API with req_time: {cur_time}')
                     states = self.get_state_vectors(cur_time)
                     state_vectors_quantity = 0
                     for _ in states:
@@ -62,7 +65,11 @@ class OpenskyDataExtraction:
 
 
 logger = log.setup()
+yappi.set_clock_type("cpu")
 
 if __name__ == "__main__":
     data_extraction = OpenskyDataExtraction()
+    yappi.start()
     data_extraction.insert_state_vectors_to_db(cur_time=int(time.time()))
+    yappi.get_func_stats().print_all()
+    yappi.get_thread_stats().print_all()

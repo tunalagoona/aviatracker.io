@@ -10,7 +10,7 @@ handlers:
         level: DEBUG
         formatter: standard
         filename: /Users/mas5mk/Work/Flight-tracker/flask_app/log_.log
-        mode: a
+        mode: w+
 
 loggers:
     main:
