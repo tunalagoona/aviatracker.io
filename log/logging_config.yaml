@@ -7,18 +7,10 @@ formatters:
 handlers:
     file_handler:
         class: logging.FileHandler
-        level: DEBUG
+        level: INFO
         formatter: standard
-        filename: /Users/mas5mk/Work/Flight-tracker/flask_app/log_.log
-        mode: w+
-
-loggers:
-    main:
-        level: INFO
-        handlers: [file_handler]
-
-    get_states:
-        level: INFO
+        filename: log/log.log
+        mode: a
 
 root:
     level: INFO
