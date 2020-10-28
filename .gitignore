@@ -1,9 +1,10 @@
 # Created by .ignore support plugin (hsz.mobi)
 config.py
-log_.log
 .idea
 ft_venv
 __pycache__/
 /opensky_network_docs.txt
 /gitflow-installer.sh
 /gitflow/
+/log/log.log
+/tasks.py

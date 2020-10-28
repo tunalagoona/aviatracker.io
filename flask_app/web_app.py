@@ -1,18 +1,18 @@
 import threading
 import time
 from contextlib import closing
-import setup_logging as log
 
 from flask import Flask
 from flask_socketio import SocketIO
 import eventlet
 import psycopg2
 
+from log import setup_logging as log
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode='eventlet')
-logger = log.setup(path='../logging_config.yaml')
+logger = log.setup()
 
 eventlet.monkey_patch()
 
@@ -70,7 +70,7 @@ def start_app():
     eventlet.sleep(0.1)
 
 
-if __name__ == '__main__':
+def start_webapp():
     fetching_thread = threading.Thread(target=fetch_vectors, daemon=True)
     fetching_thread.start()
     broadcasting_greenthread = eventlet.spawn(broadcast_vectors)
@@ -79,7 +79,5 @@ if __name__ == '__main__':
     app_launch_greenthread.wait()
     broadcasting_greenthread.wait()
     fetching_thread.join()
-
-
 
 

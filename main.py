@@ -2,12 +2,15 @@ import socket
 import time
 import requests
 import config
-import setup_logging as log
-from opensky_api import OpenskyStates
-from database_update import DbConnection
+
 from psycopg2 import DatabaseError
 from contextlib import closing
 from typing import List, Dict
+
+from log import setup_logging as log
+from opensky_api import OpenskyStates
+from database_update import DbConnection
+import flask_app.web_app as webapp
 
 
 State_vector = Dict
@@ -63,5 +66,6 @@ class OpenskyDataExtraction:
 
 
 if __name__ == "__main__":
+    webapp.start_webapp()
     data_extraction = OpenskyDataExtraction()
     data_extraction.insert_state_vectors_to_db(cur_time=int(time.time()))
