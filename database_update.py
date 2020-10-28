@@ -36,7 +36,6 @@ class DbConnection:
                         'spi': vector["spi"],
                         'position_source': vector["position_source"]
                     }
-                    # print(f'state vector: {state_vector}')
                     curs.execute("""
                             INSERT INTO opensky_state_vectors (request_time, icao24, callsign, origin_country, 
                             time_position, last_contact, longitude, latitude, baro_altitude, on_ground, velocity, 
