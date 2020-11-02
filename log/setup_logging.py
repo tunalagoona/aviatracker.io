@@ -14,6 +14,6 @@ def setup(path='/Users/mas5mk/Work/Flight-tracker/log/logging_config.yaml', leve
             print(e)
             print('Error in Logging Configuration. Using default configs')
             logging.basicConfig(level=level)
-    log = logging.getLogger(__name__)
+    log = logging.getLogger('main')
     log.info('logger was initiated')
     return log

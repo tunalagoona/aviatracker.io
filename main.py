@@ -1,5 +1,6 @@
 import time
 import config
+import threading
 
 from psycopg2 import DatabaseError
 from contextlib import closing
@@ -49,5 +50,7 @@ def insert_state_vectors_to_db(cur_time):
 
 
 if __name__ == "__main__":
-    webapp.start_webapp()
-    insert_state_vectors_to_db(cur_time=int(time.time()))
+    x = threading.Thread(target=webapp.start_webapp, daemon=True)
+    x.start()
+    y = threading.Thread(target=insert_state_vectors_to_db(cur_time=int(time.time())))
+    y.start()

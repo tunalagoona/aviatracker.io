@@ -1,20 +1,19 @@
 import threading
 import time
 from contextlib import closing
+import logging
 
+import eventlet
 from flask import Flask
 from flask_socketio import SocketIO
-import eventlet
 import psycopg2
 
-from log import setup_logging as log
+eventlet.monkey_patch()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode='eventlet')
-logger = log.setup()
-
-eventlet.monkey_patch()
+module_logger = logging.getLogger()
 
 
 @app.route('/')
@@ -26,13 +25,13 @@ def index():
 def connect():
     print('go to http://localhost:5000')
     print('connected')
-    logger.info('A client has been connected to the server')
+    module_logger.info('A client has been connected to the server')
 
 
 @socketio.on('disconnect')
 def disconnect():
     print('disconnected')
-    logger.info('A client has been disconnected from the server')
+    module_logger.info('A client has been disconnected from the server')
 
 
 inter_states = [0]
@@ -43,7 +42,7 @@ def fetch_vectors():
     with closing(psycopg2.connect(dbname="opensky", user='mas5mk', password='$GV9^MJGk8gn')) as conn:
         with conn.cursor() as curs:
             while True:
-                logger.info('Fetching from DB has started')
+                module_logger.info('Fetching from DB has started')
                 curs.execute("SELECT * FROM opensky_state_vectors "
                              "WHERE request_time = (SELECT MAX(request_time) FROM opensky_state_vectors);")
                 vectors = curs.fetchall()
@@ -51,8 +50,8 @@ def fetch_vectors():
                 for _ in vectors:
                     state_vectors_quantity += 1
                 inter_states[0] = vectors
-                logger.info(f'Quantity of state vectors fetched from the DB for the time {vectors[0][0]}: '
-                            f'{state_vectors_quantity}')
+                module_logger.info(f'Quantity of state vectors fetched from the DB for the time {vectors[0][0]}: '
+                                   f'{state_vectors_quantity}')
                 time.sleep(5)
 
 

@@ -10,7 +10,7 @@ handlers:
         level: INFO
         formatter: standard
         filename: log/log.log
-        mode: a
+        mode: w+
 
 root:
     level: INFO
