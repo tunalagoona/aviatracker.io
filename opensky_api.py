@@ -1,10 +1,11 @@
-from requests import get
 import socket
-import requests
 import config
 import json
 from typing import List, Dict
 import logging
+
+import requests
+from requests import get
 
 
 State_vector = Dict

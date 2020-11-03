@@ -1,10 +1,13 @@
+import eventlet
+eventlet.monkey_patch()
+
 import time
 import config
 import threading
+from typing import List, Dict
 
 from psycopg2 import DatabaseError
 from contextlib import closing
-from typing import List, Dict
 
 from log import setup_logging as log
 from opensky_api import OpenskyStates
@@ -39,7 +42,6 @@ def insert_state_vectors_to_db(cur_time):
                 logger.info('___ before upsert')
                 db.upsert_state_vectors(states)
                 logger.info('___ after upsert')
-                # new cursor is created for a batch of states, transaction is committed after a batch upserted
                 logger.debug(f'State vectors upserted: {states}')
                 cur_time += 5
                 time.sleep(5)

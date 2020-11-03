@@ -1,14 +1,15 @@
+import eventlet
+eventlet.monkey_patch()
+
 import threading
 import time
 from contextlib import closing
 import logging
 
-import eventlet
 from flask import Flask
 from flask_socketio import SocketIO
 import psycopg2
 
-eventlet.monkey_patch()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
