@@ -6,7 +6,7 @@ State_vector = Dict
 State_vectors = List[State_vector]
 
 
-class DbConnection:
+class DB:
     def __init__(self, dbname, user, password):
         self.conn = connect(dbname=dbname, user=user, password=password)
 
@@ -50,6 +50,18 @@ class DbConnection:
                             %(longitude)s, %(latitude)s, %(baro_altitude)s, %(on_ground)s, %(velocity)s, 
                             %(true_track)s, %(vertical_rate)s, %(geo_altitude)s);
                             """, state_vector)
+
+    def get_last_inserted_state(self):
+        with self.conn.cursor() as curs:
+            curs.execute("SELECT * FROM opensky_state_vectors "
+                         "WHERE request_time = (SELECT MAX(request_time) FROM opensky_state_vectors);")
+            vectors = curs.fetchall()
+
+            state_vectors_quantity = 0
+            for _ in vectors:
+                state_vectors_quantity += 1
+
+            return vectors, state_vectors_quantity
 
     def close(self):
         self.conn.close()
