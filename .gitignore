@@ -8,3 +8,4 @@ __pycache__/
 /gitflow/
 /log/log.log
 /tasks.py
+/celerybeat-schedule.db
