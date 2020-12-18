@@ -1,7 +1,7 @@
 import socket
 import config
 import json
-from typing import List, Dict
+from typing import List, Dict, Union
 import logging
 
 from requests import get, exceptions
@@ -47,7 +47,7 @@ class OpenskyStates(object):
 
     def get_states(self, time_sec: int = 0, icao24: str = None) -> State_vectors:
         module_logger.info("get_states has started")
-        parameters = {"time": int(time_sec), "icao24": icao24}
+        parameters: Dict[str, Union[int, str, None]] = {"time": int(time_sec), "icao24": icao24}
         try:
             r = get(
                 "{}{}".format(self.api_url, self.url_operation),
