@@ -47,14 +47,14 @@ class OpenskyStates(object):
 
     def get_states(self, time_sec: int = 0, icao24: str = None) -> State_vectors:
         module_logger.info("get_states has started")
-        parameters = {"time": int(time_sec), "icao24": icao24}  # type: ignore
+        parameters = {"time": int(time_sec), "icao24": icao24}
         try:
             r = get(
                 "{}{}".format(self.api_url, self.url_operation),
                 auth=self.auth,
-                params=parameters,
+                params=parameters,  # type: ignore
                 timeout=15,
-            )  # type: ignore
+            )
             st_code = r.status_code
             if st_code == 200:
                 module_logger.info(
