@@ -54,7 +54,7 @@ class OpenskyStates(object):
                 auth=self.auth,
                 params=parameters,
                 timeout=15,
-            )
+            )  # type: ignore
             st_code = r.status_code
             if st_code == 200:
                 module_logger.info(
