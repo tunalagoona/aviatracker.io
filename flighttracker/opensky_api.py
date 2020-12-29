@@ -1,11 +1,11 @@
-import socket
-import config
 import json
-from typing import List, Dict, Union
 import logging
+import socket
+from typing import List, Dict
 
 from requests import get, exceptions
 
+from flighttracker import config
 
 State_vector = Dict
 State_vectors = List[State_vector]

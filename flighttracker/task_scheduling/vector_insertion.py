@@ -4,11 +4,11 @@ from contextlib import closing
 
 from psycopg2 import DatabaseError
 
-import config
-from celery_proj.celery import app
-from opensky_api import OpenskyStates
-from database import DB
-from log import setup_logging as log
+from flighttracker import config
+from flighttracker.task_scheduling.celery import app
+from flighttracker.opensky_api import OpenskyStates
+from flighttracker.database import DB
+from flighttracker.log import setup_logging as log
 
 State_vector = Dict
 State_vectors = List[State_vector]
@@ -20,8 +20,10 @@ def insert_state_vectors_to_db(cur_time: int) -> None:
     api = OpenskyStates()
     try:
         logger.info("Connecting to the PostgreSQL database...")
+        print(f'config.pg_username = {config.pg_username}')
         with closing(
-            DB(dbname="opensky", user=config.pg_username, password=config.pg_password)
+            DB(dbname="opensky", user=config.pg_username, password=config.pg_password, host=config.pg_hostname,
+               port=config.pg_port_number)
         ) as db:
             logger.info("Successful connection to the PostgreSQL database")
 

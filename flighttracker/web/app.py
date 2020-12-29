@@ -9,8 +9,8 @@ import logging
 from flask import Flask
 from flask_socketio import SocketIO
 
-import config
-from database import DB
+from flighttracker import config
+from flighttracker.database import DB
 
 
 app = Flask(__name__)
@@ -42,7 +42,8 @@ states_memo = []
 
 def fetch_vectors() -> None:
     with closing(
-        DB(dbname="opensky", user=config.pg_username, password=config.pg_password)
+        DB(dbname="opensky", user=config.pg_username, password=config.pg_password, host=config.pg_hostname,
+           port=config.pg_port_number)
     ) as db:
         while True:
             module_logger.info("Fetching from DB has started")
@@ -80,3 +81,4 @@ def start_webapp() -> None:
 
 if __name__ == "__main__":
     start_webapp()
+

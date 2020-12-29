@@ -5,7 +5,7 @@ import yaml
 
 
 def setup(
-    path="/Users/mas5mk/Work/Flight-tracker/log/logging_config.yaml", level=logging.INFO
+    path="/Users/mas5mk/Work/flight-tracker/flighttracker/log/logging_config.yaml", level=logging.INFO
 ):
     with open(path, "rt") as f:
         try:

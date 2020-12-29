@@ -8,7 +8,8 @@ State_vectors = List[State_vector]
 
 
 class DB:
-    def __init__(self, dbname, user, password):
+    def __init__(self, dbname, user, password, host, port):
+        # self.conn = connect(dbname=dbname, user=user, password=password, host=host, port=port)
         self.conn = connect(dbname=dbname, user=user, password=password)
 
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
@@ -71,3 +72,4 @@ class DB:
 
     def close(self):
         self.conn.close()
+
