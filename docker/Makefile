@@ -3,7 +3,7 @@ NAME := flight-tracker
 IMG := ${USER}/${NAME}:latest
 
 build:
-	@docker build -t ${IMG} .
+	@docker build -t ${IMG} -f docker/Dockerfile .
 
 shell:
 	@docker run -it -p 8080:80 ${IMG} bash -c "/bin/bash"
