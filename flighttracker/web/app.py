@@ -4,19 +4,19 @@ eventlet.monkey_patch()
 import threading
 import time
 from contextlib import closing
-import logging
 
 from flask import Flask
 from flask_socketio import SocketIO
 
 from flighttracker import config
 from flighttracker.database import DB
+from flighttracker.log_settings import setup_logging as log
 
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "secret!"
 socketio = SocketIO(app, async_mode="eventlet")
-module_logger = logging.getLogger()
+module_logger = log.setup()
 
 
 @app.route("/")
@@ -65,7 +65,7 @@ def broadcast_vectors() -> None:
 
 
 def start_app() -> None:
-    socketio.run(app)
+    socketio.run(app, log_output=True)
     eventlet.sleep(0.1)
 
 
