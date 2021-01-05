@@ -14,10 +14,3 @@ app:
 push:
 	@docker push ${IMG}
 
-
-# rabbitmq:
-# 	rabbitmq-server -detached
-#
-# run-celery:
-#     elery -A task_scheduling beat
-#     celery -A task_scheduling worker -l INFO

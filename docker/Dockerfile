@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y vim
 
 WORKDIR /flight-tracker
 
-COPY flighttracker flighttracker
 COPY requirements.txt requirements.txt
-
 RUN pip3 install -r requirements.txt
+
+COPY docker docker
+COPY flighttracker flighttracker
