@@ -1,19 +1,28 @@
 from typing import List, Dict
 import time
 from contextlib import closing
+import logging
 
 from psycopg2 import DatabaseError
+from celery.signals import after_setup_logger
 
 from flighttracker import config
 from flighttracker.task_scheduling.celery import app
 from flighttracker.opensky_api import OpenskyStates
 from flighttracker.database import DB
-from flighttracker.log import setup_logging as log
 
 State_vector = Dict
 State_vectors = List[State_vector]
 
-logger = log.setup()
+logger = logging.getLogger()
+
+
+@after_setup_logger.connect
+def on_celery_setup_logging(logger, *args, **kwargs):
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh = logging.FileHandler('flighttracker/celery_log.log', 'w+')
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
 
 
 def insert_state_vectors_to_db(cur_time: int) -> None:
