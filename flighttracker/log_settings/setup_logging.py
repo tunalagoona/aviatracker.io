@@ -5,7 +5,7 @@ import yaml
 
 
 def setup(
-    path="/Users/mas5mk/Work/flight-tracker/flighttracker/log/logging_config.yaml", level=logging.INFO
+    path="/Users/mas5mk/Work/flight-tracker/flighttracker/log_settings/logging_config.yaml", level=logging.INFO
 ):
     with open(path, "rt") as f:
         try:
@@ -15,6 +15,6 @@ def setup(
             print(e)
             print("Error in Logging Configuration. Using default configs")
             logging.basicConfig(level=level)
-    log = logging.getLogger("main")
-    log.info("logger was initiated")
+    log = logging.getLogger()
+    log.info("logger has been initiated")
     return log

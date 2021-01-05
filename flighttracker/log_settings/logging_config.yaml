@@ -9,7 +9,7 @@ handlers:
         class: logging.FileHandler
         level: INFO
         formatter: standard
-        filename: log/log.log
+        filename: ../log.log
         mode: w+
 
 root:

@@ -1,7 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 flighttracker/config.py
 .idea
-ft_venv
 __pycache__/
 /opensky_network_docs.txt
 /gitflow-installer.sh
@@ -11,3 +10,6 @@ __pycache__/
 /flighttracker/celerybeat-schedule.db
 /flighttracker/.mypy_cache/
 /flighttracker/log/log.log
+/venv/
+/flighttracker/log.log
+/flighttracker/celery_log.log
