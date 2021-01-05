@@ -14,9 +14,9 @@ from flighttracker.log_settings import setup_logging as log
 
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "secret!"
-socketio = SocketIO(app, async_mode="eventlet")
-module_logger = log.setup()
+logger = log.setup()
+socketio = SocketIO(app, async_mode="eventlet", logger=True, engineio_logger=True,
+                    cors_allowed_origins="http://127.0.0.1:5000")
 
 
 @app.route("/")
@@ -28,16 +28,16 @@ def index():
 def connect() -> None:
     print("go to http://localhost:5000")
     print("connected")
-    module_logger.info("A client has been connected to the server")
+    logger.info("A client has been connected to the server")
 
 
 @socketio.on("disconnect")
 def disconnect() -> None:
     print("disconnected")
-    module_logger.info("A client has been disconnected from the server")
+    logger.info("A client has been disconnected from the server")
 
 
-states_memo = []
+states_memo = None
 
 
 def fetch_vectors() -> None:
@@ -46,11 +46,11 @@ def fetch_vectors() -> None:
            port=config.pg_port_number)
     ) as db:
         while True:
-            module_logger.info("Fetching from DB has started")
+            logger.info("Fetching from DB has started")
             vectors, quantity = db.get_last_inserted_state()
             global states_memo
             states_memo = vectors
-            module_logger.info(
+            logger.info(
                 f"Quantity of state vectors fetched from the DB for the time {vectors[0][0]}: "
                 f"{quantity}"
             )
@@ -81,4 +81,3 @@ def start_webapp() -> None:
 
 if __name__ == "__main__":
     start_webapp()
-
