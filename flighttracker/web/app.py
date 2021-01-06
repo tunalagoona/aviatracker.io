@@ -1,20 +1,21 @@
 import eventlet
+
 eventlet.monkey_patch()
 
 import threading
 import time
 from contextlib import closing
+import yaml
+import os
 
 from flask import Flask
 from flask_socketio import SocketIO
 
-from flighttracker import config
+from flighttracker import utils
 from flighttracker.database import DB
-from flighttracker.log_settings import setup_logging as log
-
 
 app = Flask(__name__)
-logger = log.setup()
+logger = utils.setup_logging()
 socketio = SocketIO(app, async_mode="eventlet", logger=True, engineio_logger=True,
                     cors_allowed_origins="http://127.0.0.1:5000")
 
@@ -40,10 +41,9 @@ def disconnect() -> None:
 states_memo = None
 
 
-def fetch_vectors() -> None:
+def fetch_vectors(user, password, host, port) -> None:
     with closing(
-        DB(dbname="opensky", user=config.pg_username, password=config.pg_password, host=config.pg_hostname,
-           port=config.pg_port_number)
+            DB(dbname="opensky", user=user, password=password, host=host, port=port)
     ) as db:
         while True:
             logger.info("Fetching from DB has started")
@@ -70,7 +70,19 @@ def start_app() -> None:
 
 
 def start_webapp() -> None:
-    fetching_thread = threading.Thread(target=fetch_vectors, daemon=True)
+    script_dir = os.path.abspath(__file__ + "/../../../")
+    rel_path = 'config/config.yaml'
+    path = os.path.join(script_dir, rel_path)
+
+    with open(path, 'r') as cnf:
+        parsed_yaml_file = yaml.load(cnf, Loader=yaml.FullLoader)
+        user_name = parsed_yaml_file['postgres']['pg_username']
+        password = parsed_yaml_file['postgres']['pg_password']
+        hostname = parsed_yaml_file['postgres']['pg_hostname']
+        port_number = parsed_yaml_file['postgres']['pg_port_number']
+
+    fetching_thread = threading.Thread(target=fetch_vectors, daemon=True,
+                                       args=(user_name, password, hostname, port_number))
     fetching_thread.start()
     broadcasting_greenthread = eventlet.spawn(broadcast_vectors)
     app_launch_greenthread = eventlet.spawn(start_app)

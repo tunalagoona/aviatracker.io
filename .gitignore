@@ -4,12 +4,8 @@ flighttracker/config.py
 __pycache__/
 /opensky_network_docs.txt
 /gitflow-installer.sh
-/tasks.py
-/celerybeat-schedule.db
 /gitflow/
-/flighttracker/celerybeat-schedule.db
 /flighttracker/.mypy_cache/
-/flighttracker/log/log.log
 /venv/
-/flighttracker/log.log
-/flighttracker/celery_log.log
+/beat/
+/logs/

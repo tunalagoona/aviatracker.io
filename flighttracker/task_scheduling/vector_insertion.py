@@ -2,6 +2,8 @@ from typing import List, Dict
 import time
 from contextlib import closing
 import logging
+import yaml
+import os
 
 from psycopg2 import DatabaseError
 from celery.signals import after_setup_logger
@@ -20,7 +22,11 @@ logger = logging.getLogger()
 @after_setup_logger.connect
 def on_celery_setup_logging(logger, *args, **kwargs):
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh = logging.FileHandler('flighttracker/celery_log.log', 'w+')
+    script_dir = os.path.abspath(__file__ + "/../../../")
+    print(f'vector insertion script_dir = {script_dir}')
+    rel_path = 'logs/celery_log.log'
+    path = os.path.join(script_dir, rel_path)
+    fh = logging.FileHandler(path, 'w+')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
@@ -29,10 +35,20 @@ def insert_state_vectors_to_db(cur_time: int) -> None:
     api = OpenskyStates()
     try:
         logger.info("Connecting to the PostgreSQL database...")
-        print(f'config.pg_username = {config.pg_username}')
+
+        script_dir = os.path.abspath(__file__ + "/../../../")
+        rel_path = 'config/config.yaml'
+        path = os.path.join(script_dir, rel_path)
+
+        with open(path, 'r') as cnf:
+            parsed_yaml_file = yaml.load(cnf, Loader=yaml.FullLoader)
+            user_name = parsed_yaml_file['postgres']['pg_username']
+            password = parsed_yaml_file['postgres']['pg_password']
+            hostname = parsed_yaml_file['postgres']['pg_hostname']
+            port_number = parsed_yaml_file['postgres']['pg_port_number']
+
         with closing(
-            DB(dbname="opensky", user=config.pg_username, password=config.pg_password, host=config.pg_hostname,
-               port=config.pg_port_number)
+            DB(dbname="opensky", user=user_name, password=password, host=hostname, port=port_number)
         ) as db:
             logger.info("Successful connection to the PostgreSQL database")
 

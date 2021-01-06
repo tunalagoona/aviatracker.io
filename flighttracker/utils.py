@@ -1,16 +1,20 @@
 import logging
 import logging.config
+import coloredlogs
+import os
 
 import yaml
 
 
-def setup(
-    path="/Users/mas5mk/Work/flight-tracker/flighttracker/log_settings/logging_config.yaml", level=logging.INFO
-):
+def setup_logging(level=logging.INFO):
+    script_dir = os.path.abspath(__file__ + "/../../")
+    rel_path = "config/logging.yaml"
+    path = os.path.join(script_dir, rel_path)
     with open(path, "rt") as f:
         try:
             configurations = yaml.safe_load(f.read())
             logging.config.dictConfig(configurations)
+            coloredlogs.install()
         except Exception as e:
             print(e)
             print("Error in Logging Configuration. Using default configs")

@@ -2,6 +2,8 @@ import json
 import logging
 import socket
 from typing import List, Dict
+import yaml
+import os
 
 from requests import get, exceptions
 
@@ -40,7 +42,17 @@ class StateVector(object):
 
 
 class OpenskyStates(object):
-    def __init__(self, username=config.os_username, password=config.os_password):
+    def __init__(self, username=None, password=None):
+        if username is None or password is None:
+            script_dir = os.path.abspath(__file__ + "/../../")
+            rel_path = 'config/config.yaml'
+            path = os.path.join(script_dir, rel_path)
+
+            with open(path, 'r') as cnf:
+                parsed_yaml_file = yaml.load(cnf, Loader=yaml.FullLoader)
+                username = parsed_yaml_file['opensky']['os_username']
+                password = parsed_yaml_file['opensky']['os_password']
+
         self.auth = (username, password)
         self.api_url = "https://opensky-network.org/api"
         self.url_operation = "/states/all"

@@ -1,0 +1,11 @@
+version: 1
+
+opensky:
+    os_username: 'bigtuna'
+    os_password: '#3@DwyrUb48E'
+
+postgres:
+    pg_username: 'mas5mk'
+    pg_password: '3zY7RfR3R9MD$zZ'
+    pg_hostname: 'host.docker.internal'
+    pg_port_number: 5432
