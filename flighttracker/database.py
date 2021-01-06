@@ -2,7 +2,6 @@ from typing import List, Dict, Tuple
 
 from psycopg2 import connect
 
-
 State_vector = Dict
 State_vectors = List[State_vector]
 
@@ -12,11 +11,47 @@ class DB:
         # self.conn = connect(dbname=dbname, user=user, password=password, host=host, port=port)
         self.conn = connect(dbname=dbname, user=user, password=password)
 
+    def create_table(self):
+        new_table = (
+            """
+                CREATE TABLE opensky_state_vectors (
+                        request_time INTEGER,
+                        icao24 VARCHAR,
+                        callsign VARCHAR,
+                        origin_country VARCHAR,
+                        time_position INTEGER,
+                        last_contact INTEGER,
+                        longitude DOUBLE PRECISION,
+                        latitude DOUBLE PRECISION,
+                        baro_altitude DOUBLE PRECISION,
+                        on_ground BOOLEAN,
+                        velocity DOUBLE PRECISION,
+                        true_track DOUBLE PRECISION,
+                        vertical_rate DOUBLE PRECISION,
+                        sensors INTEGER,
+                        geo_altitude DOUBLE PRECISION,
+                        squawk TEXT,
+                        spi BOOLEAN,
+                        position_source INTEGER,
+                        PRIMARY KEY (request_time, icao24)
+                );
+            """
+        )
+        with self.conn:
+            with self.conn.cursor() as curs:
+                curs.execute(new_table)
+
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
         with self.conn:
             """When a connection exits the with block, if no exception has been raised by the block,
             the transaction is committed"""
             with self.conn.cursor() as curs:
+                curs.execute("SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_name=%s)",
+                             ('opensky_state_vectors',))
+                table_exists = curs.fetchone()[0]
+                if table_exists is not True:
+                    self.create_table()
+
                 for vector in vectors:
                     state_vector = {
                         "request_time": vector["request_time"],
@@ -72,4 +107,3 @@ class DB:
 
     def close(self):
         self.conn.close()
-
