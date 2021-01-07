@@ -9,3 +9,4 @@ __pycache__/
 /venv/
 /beat/
 /logs/
+/config/config.yaml
