@@ -17,7 +17,7 @@ from flighttracker.database import DB
 app = Flask(__name__)
 logger = utils.setup_logging()
 socketio = SocketIO(app, async_mode="eventlet", logger=True, engineio_logger=True,
-                    cors_allowed_origins="http://127.0.0.1:5000")
+                    cors_allowed_origins="host.docker.internal:5000")
 
 
 @app.route("/")
@@ -65,7 +65,7 @@ def broadcast_vectors() -> None:
 
 
 def start_app() -> None:
-    socketio.run(app, log_output=True)
+    socketio.run(app, host='0.0.0.0', log_output=True)
     eventlet.sleep(0.1)
 
 
