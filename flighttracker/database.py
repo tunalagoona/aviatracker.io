@@ -8,8 +8,8 @@ State_vectors = List[State_vector]
 
 class DB:
     def __init__(self, dbname, user, password, host, port):
-        # self.conn = connect(dbname=dbname, user=user, password=password, host=host, port=port)
-        self.conn = connect(dbname=dbname, user=user, password=password)
+        self.conn = connect(dbname=dbname, user=user, password=password, host=host, port=port)
+        # self.conn = connect(dbname=dbname, user=user, password=password)
 
     def create_table(self):
         new_table = (

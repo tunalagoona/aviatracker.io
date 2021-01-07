@@ -7,8 +7,6 @@ import os
 
 from requests import get, exceptions
 
-from flighttracker import config
-
 State_vector = Dict
 State_vectors = List[State_vector]
 

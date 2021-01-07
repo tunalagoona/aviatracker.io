@@ -8,7 +8,7 @@ import yaml
 
 def setup_logging(level=logging.INFO):
     script_dir = os.path.abspath(__file__ + "/../../")
-    rel_path = "config/logging.yaml"
+    rel_path = "logging.yaml"
     path = os.path.join(script_dir, rel_path)
     with open(path, "rt") as f:
         try:
