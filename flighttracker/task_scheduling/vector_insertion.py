@@ -8,7 +8,6 @@ import os
 from psycopg2 import DatabaseError
 from celery.signals import after_setup_logger
 
-from flighttracker import config
 from flighttracker.task_scheduling.celery import app
 from flighttracker.opensky_api import OpenskyStates
 from flighttracker.database import DB

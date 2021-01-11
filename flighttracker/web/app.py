@@ -16,8 +16,7 @@ from flighttracker.database import DB
 
 app = Flask(__name__)
 logger = utils.setup_logging()
-socketio = SocketIO(app, async_mode="eventlet", logger=True, engineio_logger=True,
-                    cors_allowed_origins="host.docker.internal:5000")
+socketio = SocketIO(app, async_mode="eventlet", logger=True, engineio_logger=True)
 
 
 @app.route("/")
@@ -27,7 +26,6 @@ def index():
 
 @socketio.on("connect")
 def connect() -> None:
-    print("go to http://localhost:5000")
     print("connected")
     logger.info("A client has been connected to the server")
 
