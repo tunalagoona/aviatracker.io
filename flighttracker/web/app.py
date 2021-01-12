@@ -39,9 +39,9 @@ def disconnect() -> None:
 states_memo = None
 
 
-def fetch_vectors(user, password, host, port) -> None:
+def fetch_vectors(dbname, user, password, host, port) -> None:
     with closing(
-            DB(dbname="opensky", user=user, password=password, host=host, port=port)
+            DB(dbname=dbname, user=user, password=password, host=host, port=port)
     ) as db:
         while True:
             logger.info("Fetching from DB has started")
@@ -74,13 +74,14 @@ def start_webapp() -> None:
 
     with open(path, 'r') as cnf:
         parsed_yaml_file = yaml.load(cnf, Loader=yaml.FullLoader)
+        dbname = parsed_yaml_file['postgres']['pg_dbname']
         user_name = parsed_yaml_file['postgres']['pg_username']
         password = parsed_yaml_file['postgres']['pg_password']
         hostname = parsed_yaml_file['postgres']['pg_hostname']
         port_number = parsed_yaml_file['postgres']['pg_port_number']
 
     fetching_thread = threading.Thread(target=fetch_vectors, daemon=True,
-                                       args=(user_name, password, hostname, port_number))
+                                       args=(dbname, user_name, password, hostname, port_number))
     fetching_thread.start()
     broadcasting_greenthread = eventlet.spawn(broadcast_vectors)
     app_launch_greenthread = eventlet.spawn(start_app)

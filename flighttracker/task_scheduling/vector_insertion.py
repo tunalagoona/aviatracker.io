@@ -41,13 +41,14 @@ def insert_state_vectors_to_db(cur_time: int) -> None:
 
         with open(path, 'r') as cnf:
             parsed_yaml_file = yaml.load(cnf, Loader=yaml.FullLoader)
+            dbname = parsed_yaml_file['postgres']['pg_dbname']
             user_name = parsed_yaml_file['postgres']['pg_username']
             password = parsed_yaml_file['postgres']['pg_password']
             hostname = parsed_yaml_file['postgres']['pg_hostname']
             port_number = parsed_yaml_file['postgres']['pg_port_number']
 
         with closing(
-            DB(dbname="opensky", user=user_name, password=password, host=hostname, port=port_number)
+            DB(dbname=dbname, user=user_name, password=password, host=hostname, port=port_number)
         ) as db:
             logger.info("Successful connection to the PostgreSQL database")
 
