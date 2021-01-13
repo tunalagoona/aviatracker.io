@@ -1,15 +1,27 @@
 from typing import List, Dict, Tuple
+import logging
 
 from psycopg2 import connect
 
 State_vector = Dict
 State_vectors = List[State_vector]
 
+logger = logging.getLogger()
+
 
 class DB:
     def __init__(self, dbname, user, password, host, port):
+        logger.info("Connecting to the PostgreSQL database...")
         self.conn = connect(dbname=dbname, user=user, password=password, host=host, port=port)
-        # self.conn = connect(dbname=dbname, user=user, password=password)
+        check = (
+            """
+            SELECT 1;
+            """
+        )
+        with self.conn:
+            with self.conn.cursor() as curs:
+                curs.execute(check)
+        logger.info("Successful connection to the PostgreSQL database")
 
     def create_table(self):
         new_table = (
@@ -46,7 +58,7 @@ class DB:
             """When a connection exits the with block, if no exception has been raised by the block,
             the transaction is committed"""
             with self.conn.cursor() as curs:
-                curs.execute("SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_name=%s)",
+                curs.execute("SELECT EXISTS (SELECT * FROM information_schema.tables WHERE table_name=%s)",
                              ('opensky_state_vectors',))
                 table_exists = curs.fetchone()[0]
                 if table_exists is not True:
