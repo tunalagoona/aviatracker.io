@@ -16,12 +16,22 @@ from flighttracker.database import DB
 
 app = Flask(__name__)
 logger = utils.setup_logging()
-socketio = SocketIO(app, async_mode="eventlet", logger=True, engineio_logger=True)
+socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True)
 
 
 @app.route("/")
 def index():
     return app.send_static_file("index.html")
+
+
+@app.route('/about', methods=['GET'])
+def about():
+    return app.send_static_file("about.html")
+
+
+@app.route('/contacts', methods=['GET'])
+def contacts():
+    return app.send_static_file("contacts.html")
 
 
 @socketio.on("connect")
@@ -40,9 +50,7 @@ states_memo = None
 
 
 def fetch_vectors(dbname, user, password, host, port) -> None:
-    with closing(
-            DB(dbname=dbname, user=user, password=password, host=host, port=port)
-    ) as db:
+    with closing(DB(dbname=dbname, user=user, password=password, host=host, port=port)) as db:
         while True:
             logger.info("Fetching from DB has started")
             vectors, quantity = db.get_last_inserted_state()
