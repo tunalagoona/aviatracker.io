@@ -8,7 +8,7 @@ from contextlib import closing
 import yaml
 import os
 
-from flask import Flask
+from flask import Flask, render_template
 from flask_socketio import SocketIO
 
 from flighttracker import utils
@@ -21,17 +21,17 @@ socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=Tru
 
 @app.route("/")
 def index():
-    return app.send_static_file("index.html")
+    return render_template("index.html")
 
 
 @app.route('/about', methods=['GET'])
 def about():
-    return app.send_static_file("about.html")
+    return render_template("about.html")
 
 
 @app.route('/contacts', methods=['GET'])
 def contacts():
-    return app.send_static_file("contacts.html")
+    return render_template("contacts.html")
 
 
 @socketio.on("connect")
