@@ -15,10 +15,33 @@
             font-family: 'Cambay', Helvetica;
             font-size: 22px;
         }
+        .container {
+            margin-top: 10px;
+            width: 900px;
+            padding: 10px;
+        }
+        .bird {
+            width: 50px;
+            padding: 10px;
+            display: inline-block;
+            vertical-align: sub;
+            text-align: middle;
+        }
         h1 {
             margin: 2px;
             display: inline-block;
             vertical-align: middle
+        }
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .item {
+            width: 150px;
+            display: inline-block;
+            vertical-align: sub;
+            text-align: center;
+            font-size: 22px;
         }
         .shadow {
             box-shadow: 0px 10px 10px 0px inset #1B1E20;
@@ -35,28 +58,20 @@
             width: 100%;
             z-index: 1;
         }
-        .container {
-            margin-top: 10px;
-            width: 900px;
-            padding: 10px;
+        .esri-popup__header {
+            color: #ffffff;
+            cursor: default;
+            line-height: 20px;
+            background: rgba(30, 34, 36, 1) !important;
         }
-        .item {
-            width: 150px;
-            display: inline-block;
-            vertical-align: sub;
-            text-align: center;
-            font-size: 22px;
-        }
-        .bird {
-            width: 50px;
-            padding: 10px;
-            display: inline-block;
-            vertical-align: sub;
-            text-align: middle;
-        }
-        a {
-            color: inherit;
-            text-decoration: none;
+        #feature-node {
+            position: absolute;
+            float: left;
+            width: 25%;
+            height: 100%;
+            padding: 1em;
+            z-index: 1;
+            background: rgba(0, 0, 0, 1)
         }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
@@ -74,22 +89,26 @@
             "esri/Map",
             "esri/views/MapView",
             "esri/Graphic",
-            "esri/layers/GraphicsLayer"
-            ], function(Map, MapView, Graphic, GraphicsLayer) {
+            "esri/widgets/Feature",
+            "esri/layers/FeatureLayer"
+            ], function(Map, MapView, Graphic, Feature, FeatureLayer) {
 
                 var map = new Map({
-                  basemap: "dark-gray-vector"
+                    basemap: "dark-gray-vector"
                 });
 
                 var view = new MapView({
-                  container: "viewDiv",
-                  map: map,
-                  center: [-50.80500, 34.02700], // longitude, latitude
-                  zoom: 2
+                    container: "viewDiv",
+                    map: map,
+                    center: [-50.80500, 34.02700], // longitude, latitude
+                    zoom: 2,
+                    popup: {
+                    autoOpenEnabled: false
+                    }
                 });
 
-                graphicsLayer = new GraphicsLayer();
-                map.add(graphicsLayer);
+                featureLayer = new FeatureLayer();
+                map.add(featureLayer);
 
                 var marker = {
                     type: "picture-marker",
@@ -104,7 +123,7 @@
                 var pointGraphics = {};
 
                 updateGraphics = function (vectors) {
-                    graphicsLayer.removeAll();
+                    featureLayer.removeAll();
 
                     var vectorQuantity = vectors.length;
                     console.log("vectorQuantity time = "+ vectors[0][0] + ": " + vectorQuantity);
@@ -133,7 +152,12 @@
                             title: "Aircraft information",
                             content:
                                 `<ul><li>Icao24: ${attributes[vectors[i][1]].Icao24}</li>` +
-                                `<li>Callsign: ${attributes[vectors[i][1]].Callsign}</li>`
+                                `<li>Callsign: ${attributes[vectors[i][1]].Callsign}</li>` +
+                                `<li>Origin_country: ${attributes[vectors[i][1]].Origin_country}</li>` +
+                                `<li>Longitude: ${attributes[vectors[i][1]].Longitude}</li>` +
+                                `<li>Latitude: ${attributes[vectors[i][1]].Latitude}</li>` +
+                                `<li>Baro_altitude: ${attributes[vectors[i][1]].Baro_altitude}</li>` +
+                                `<li>Velocity: ${attributes[vectors[i][1]].Velocity}</li>`
                         };
 
                         pointGraphics[vectors[i][1]] = new Graphic({
@@ -145,10 +169,43 @@
                     };
 
                     for (var key in pointGraphics) {
-                        graphicsLayer.add(pointGraphics[key])
+                        featureLayer.add(pointGraphics[key])
                     };
                 };
-        });
+
+                const graphic = {
+                    popupTemplate: {
+                    content: "Mouse over features to show details..."
+                    }
+                };
+
+                const feature = new Feature({
+                    container: "feature-node",
+                    graphic: graphic,
+                    map: view.map,
+                    spatialReference: view.spatialReference
+                });
+
+                view.whenLayerView(featureLayer).then(function (layerView) {
+                    let highlight;
+                    view.on("pointer-move", function (event) {
+                        view.hitTest(event).then(function (event) {
+                            let results = event.results.filter(function (result) {
+                                return result.graphic.featureLayer.popupTemplate;
+                            });
+                            let result = results[0];
+                            highlight && highlight.remove();
+                            if (result) {
+                                feature.graphic = result.graphic;
+                                highlight = layerView.highlight(result.graphic);
+                            } else {
+                                feature.graphic = graphic;
+                            }
+                        });
+                    });
+                });
+
+            });
     </script>
 
     <script type="text/javascript">
@@ -174,13 +231,14 @@
         </div>
         <h1>MyFly</h1>
         <div class="item">
-            <a href="{{  url_for('static', filename='about.html') }}">About MyFly</a>
+            <a href="{{  url_for('.about') }}">About MyFly</a>
         </div>
         <div class="item">
-            <a href="{{ url_for('static', filename='contacts.html') }}">Contacts</a>
+            <a href="{{ url_for('.contacts') }}">Contacts</a>
         </div>
     </div>
     <div>
+        <div id="feature-node" class="esri-widget"></div>
         <div id="viewDiv"></div>
         <div class="shadow"></div>
     </div>
