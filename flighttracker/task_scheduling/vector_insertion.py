@@ -22,7 +22,6 @@ logger = logging.getLogger()
 def on_celery_setup_logging(logger, *args, **kwargs):
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     script_dir = os.path.abspath(__file__ + "/../../../")
-    print(f'vector insertion script_dir = {script_dir}')
     rel_path = 'logs/celery_log.log'
     path = os.path.join(script_dir, rel_path)
     fh = logging.FileHandler(path, 'w+')
@@ -33,8 +32,6 @@ def on_celery_setup_logging(logger, *args, **kwargs):
 def insert_state_vectors_to_db(cur_time: int) -> None:
     api = OpenskyStates()
     try:
-        logger.info("Connecting to the PostgreSQL database...")
-
         script_dir = os.path.abspath(__file__ + "/../../../")
         rel_path = 'config/config.yaml'
         path = os.path.join(script_dir, rel_path)
@@ -46,12 +43,11 @@ def insert_state_vectors_to_db(cur_time: int) -> None:
             password = parsed_yaml_file['postgres']['pg_password']
             hostname = parsed_yaml_file['postgres']['pg_hostname']
             port_number = parsed_yaml_file['postgres']['pg_port_number']
+            logger.info(f'dbname: {dbname}, hostname: {hostname}')
 
         with closing(
             DB(dbname=dbname, user=user_name, password=password, host=hostname, port=port_number)
         ) as db:
-            logger.info("Successful connection to the PostgreSQL database")
-
             logger.info(f"A request has been sent to API with req_time: {cur_time}")
             states: State_vectors = api.get_states(time_sec=cur_time)
             logger.info(
