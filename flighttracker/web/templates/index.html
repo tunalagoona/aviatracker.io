@@ -32,7 +32,7 @@
             display: inline-block;
             vertical-align: middle
         }
-        a {
+        #about {
             color: inherit;
             text-decoration: none;
         }
@@ -72,15 +72,18 @@
             height: 100%;
             padding: 0em;
             z-index: 2;
+            color: inherit;
             background: rgba(18, 20, 21, 0.5)
         }
-        #info {
-            background: rgba(18, 20, 21, 0.5)
+        .esri-feature__size-container {
             padding: 20px;
-            font-size: 14pt;
-            color: inherit;
-            font-family: 'Cambay', Helvetica;
-            margin-left: 0px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 8px;
+            color: grey;
+            position: absolute;
+            bottom: 5px;
         }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
@@ -112,7 +115,7 @@
                     center: [0, 20], // longitude, latitude
                     zoom: 1,
                     popup: {
-                    autoOpenEnabled: true
+                    autoOpenEnabled: false
                     },
                     highlightOptions: {
                         color: [255, 255, 255, 1],
@@ -126,9 +129,7 @@
 
                 var marker = {
                     type: "picture-marker",
-                    url: "https://arcgis.github.io/arcgis-samples-javascript/sample-data/cat3.png",
-                    width: 30,
-                    height: 30
+                    url: "{{  url_for('static', filename='icon.svg') }}"
                 };
 
                 var points = {};
@@ -243,10 +244,10 @@
         </div>
         <h1>MyFly</h1>
         <div class="item">
-            <a href="{{  url_for('.about') }}">About MyFly</a>
+            <a id="about" href="{{  url_for('.about') }}">About MyFly</a>
         </div>
         <div class="item">
-            <a href="{{ url_for('.contacts') }}">Contacts</a>
+            <a id="about" href="{{ url_for('.contacts') }}">Contacts</a>
         </div>
     </div>
     <div>
@@ -254,6 +255,10 @@
         <div id="viewDiv"></div>
         <div class="shadow"></div>
 
+    </div>
+    <div class="footer">
+        Icons made by <a id="about" href="http://www.freepik.com/" title="Freepik">Freepik</a>
+        from <a id="about" href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
     </div>
 
 </body>
