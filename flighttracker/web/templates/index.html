@@ -74,6 +74,14 @@
             z-index: 2;
             background: rgba(18, 20, 21, 0.5)
         }
+        #info {
+            background: rgba(18, 20, 21, 0.5)
+            padding: 20px;
+            font-size: 14pt;
+            color: inherit;
+            font-family: 'Cambay', Helvetica;
+            margin-left: 0px;
+        }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="https://kit.fontawesome.com/2ddda9be5b.js" crossorigin="anonymous"></script>
@@ -105,6 +113,11 @@
                     zoom: 1,
                     popup: {
                     autoOpenEnabled: true
+                    },
+                    highlightOptions: {
+                        color: [255, 255, 255, 1],
+                        haloOpacity: 0.4,
+                        fillOpacity: 0.3
                     }
                 });
 
@@ -190,10 +203,8 @@
                 view.whenLayerView(graphicLayer).then(function (layerView) {
                     let highlight;
                     view.on("pointer-move", function (event) {
-                        view.hitTest(event).then(function (event) {
-                            let results = event.results.filter(function (result) {
-                                return result.graphic.graphicLayer.popupTemplate;
-                            });
+                        view.hitTest(event).then(function (response) {
+                            let results = response.results;
                             let result = results[0];
                             highlight && highlight.remove();
                             if (result) {
