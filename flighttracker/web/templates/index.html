@@ -102,8 +102,8 @@
             "esri/views/MapView",
             "esri/Graphic",
             "esri/widgets/Feature",
-            "esri/layers/GraphicsLayer"
-            ], function(Map, MapView, Graphic, Feature, GraphicsLayer) {
+            "esri/layers/FeatureLayer"
+            ], function(Map, MapView, Graphic, Feature, FeatureLayer) {
 
                 var map = new Map({
                     basemap: "dark-gray-vector"
@@ -115,21 +115,41 @@
                     center: [0, 20], // longitude, latitude
                     zoom: 1,
                     popup: {
-                    autoOpenEnabled: false
-                    },
-                    highlightOptions: {
-                        color: [255, 255, 255, 1],
-                        haloOpacity: 0.4,
-                        fillOpacity: 0.3
+                        autoOpenEnabled: false
                     }
                 });
 
-                graphicLayer = new GraphicsLayer();
-                map.add(graphicLayer);
-
                 var marker = {
                     type: "picture-marker",
-                    url: "{{  url_for('static', filename='icon.svg') }}"
+                    url: "{{  url_for('static', filename='icon.svg') }}",
+                    angle: 0
+                };
+
+                fields = [{
+                    name: "Icao24",
+                    type: "oid"
+                }, {
+                    name: "Origin_country",
+                    type: "string"
+                }, {
+                    name: "Longitude",
+                    type: "double"
+                }, {
+                    name: "Latitude",
+                    type: "double"
+                }, {
+                    name: "True_track",
+                    type: "double"
+                }];
+
+                const rotationRenderer = {
+                    type: "simple",
+                    symbol: marker,
+                    visualVariables: {
+                        type: "rotation",
+                        field: "True_track",
+                        rotationType: "geographic"
+                    }
                 };
 
                 var points = {};
