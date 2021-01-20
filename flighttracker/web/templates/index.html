@@ -116,6 +116,11 @@
                     zoom: 1,
                     popup: {
                         autoOpenEnabled: false
+                    },
+                    highlightOptions: {
+                        color: [255, 255, 255, 1],
+                        haloOpacity: 0.5,
+                        fillOpacity: 0.5
                     }
                 });
 
@@ -152,18 +157,125 @@
                     }
                 };
 
-                var points = {};
-                var attributes = {};
-                var popupTemplates = {};
-                var pointGraphics = {};
+                let points = {};
+                let pointGraphics = {};
+                let attributes = {};
+                let popupTemplates = {};
 
-                updateGraphics = function (vectors) {
-                    graphicLayer.removeAll();
+                const vector = {
+                    Icao24: "lf324",
+                    Origin_country: "Tralyandiya",
+                    Longitude: 0,
+                    Latitude: 20,
+                    True_track: 89
+                };
 
-                    var vectorQuantity = vectors.length;
-                    console.log("vectorQuantity time = "+ vectors[0][0] + ": " + vectorQuantity);
+                points = {
+                    type: "point",
+                    longitude: vector["Longitude"],
+                    latitude: vector["Latitude"]
+                };
 
-                    for (var i = 0; i < vectorQuantity; i ++) {
+                attributes = {
+                    Icao24: vector.Icao24,
+                    Origin_country: vector["Origin_country"],
+                    Longitude: vector["Longitude"],
+                    Latitude: vector["Latitude"],
+                    True_track: vector["True_track"]
+                };
+
+                pointGraphics = new Graphic({
+                    geometry: points,
+                    symbol: marker,
+                    attributes: attributes
+                });
+
+                featureLayer = new FeatureLayer({
+                    source: [pointGraphics],
+                    supportsEditing: true,
+                    supportsAdd: true,
+                    fields: fields,
+                    objectIdField: "Icao24",
+                    renderer: rotationRenderer,
+                    geometryType: "point",
+                    spatialReference: {
+                        wkid: 3857
+                    }
+                });
+
+                map.add(featureLayer);
+
+                async function applyEditsToLayer(edits) {
+                    featureLayer
+                        .applyEdits(edits)
+                        .then(function (results) {
+                            if (results.deleteFeatureResults.length > 0) {
+                                console.log(
+                                    results.deleteFeatureResults.length,
+                                    "features have been removed"
+                                );
+                            }
+                            if (results.addFeatureResults.length > 0) {
+                                let objectIds = [];
+                                results.addFeatureResults.forEach(function (item) {
+                                    objectIds.push(item.objectId);
+                                });
+                                featureLayer
+                                    .queryFeatures({
+                                        objectIds: objectIds
+                                    })
+                                    .then(function (results) {
+                                        console.log(
+                                            results.features.length +
+                                            " features have been added"
+                                        );
+                                    });
+                            }
+                        })
+                }
+
+                let removeFeatures = async (callback) => {
+                    featureLayer.queryFeatures().then(function (results) {
+                        const deleteEdits = {
+                            deleteFeatures: results.features
+                        }
+                        applyEditsToLayer(deleteEdits).then(() => {
+                            console.log("starting add features")
+                            if (callback) {
+                                console.log("arguments: " + arguments);
+                                console.log("arguments[0]: " + arguments[0]);
+                                console.log("arguments[1]: " + arguments[1]);
+                                callback(arguments[1]);
+                            }
+                        })
+                    });
+                }
+
+                function addFeatures(graphics) {
+                    const addEdits = {
+                        addFeatures: []
+                    };
+
+                    console.log("pointGraphics inside addFeatures(): " + graphics);
+
+                    if (graphics) {
+                        graphics.forEach(function (item) {
+                            addEdits.addFeatures.push(item)
+                        })
+                    }
+
+                    console.log("addFeatures: " + addEdits.addFeatures)
+
+                    applyEditsToLayer(addEdits);
+                }
+
+                async function addVectors(vectors) {
+                    let attributes = {};
+                    let pointGraphics = [];
+                    console.log("first vector: " + vectors[0])
+                    const vectorQuantity = vectors.length;
+                    console.log("time = "+ vectors[0][0] + ", vectorQuantity: " + vectorQuantity);
+                    for (let i = 0; i < vectorQuantity; i ++) {
                         points[vectors[i][1]] = {
                             type: "point",
                             longitude: vectors[i][6],
@@ -192,51 +304,113 @@
                                 `<li>Longitude: ${attributes[vectors[i][1]].Longitude}</li>` +
                                 `<li>Latitude: ${attributes[vectors[i][1]].Latitude}</li>` +
                                 `<li>Baro_altitude: ${attributes[vectors[i][1]].Baro_altitude}</li>` +
-                                `<li>Velocity: ${attributes[vectors[i][1]].Velocity}</li>`
+                                `<li>Velocity: ${attributes[vectors[i][1]].Velocity}</li></ul>`
                         };
 
-                        pointGraphics[vectors[i][1]] = new Graphic({
-                            geometry: points[vectors[i][1]],
-                            symbol: marker,
-                            attributes: attributes[vectors[i][1]],
-                            popupTemplate: popupTemplates[vectors[i][1]]
-                        });
-                    };
-
-                    for (var key in pointGraphics) {
-                        graphicLayer.add(pointGraphics[key])
-                    };
-                };
-
-                const graphic = {
-                    popupTemplate: {
-                    content: "Mouse over features to show details..."
+                        pointGraphics.push(
+                            new Graphic({
+                                geometry: points[vectors[i][1]],
+                                symbol: marker,
+                                attributes: attributes[vectors[i][1]],
+                                popupTemplate: popupTemplates[vectors[i][1]]
+                            })
+                        );
                     }
+                    return pointGraphics
+                }
+
+                updateGraphics = function (vectors) {
+                    console.log("updateGraphics() has started");
+                    addVectors(vectors).then((graphics) => {
+                        console.log("addVectors finished")
+                        console.log("pointGraphics inside updateGraphics(): " + graphics);
+                        removeFeatures(addFeatures, graphics);
+                    })
                 };
 
-                const feature = new Feature({
-                    container: "feature-node",
-                    graphic: graphic,
-                    map: view.map,
-                    spatialReference: view.spatialReference
-                });
+                // updateGraphics = function (vectors) {
+                //     graphicLayer.removeAll();
+                //
+                //     var vectorQuantity = vectors.length;
+                //     console.log("vectorQuantity time = "+ vectors[0][0] + ": " + vectorQuantity);
+                //
+                //     for (var i = 0; i < vectorQuantity; i ++) {
+                //         points[vectors[i][1]] = {
+                //             type: "point",
+                //             longitude: vectors[i][6],
+                //             latitude: vectors[i][7]
+                //         };
+                //
+                //         attributes[vectors[i][1]] = {
+                //             Icao24: vectors[i][1],
+                //             Callsign: vectors[i][2],
+                //             Origin_country: vectors[i][3],
+                //             Longitude: vectors[i][6],
+                //             Latitude: vectors[i][7],
+                //             Baro_altitude: vectors[i][8],
+                //             Velocity: vectors[i][10],
+                //             True_track: vectors[i][11],
+                //             Vertical_rate: vectors[i][12],
+                //             Geo_altitude: vectors[i][14]
+                //         };
+                //
+                //         popupTemplates[vectors[i][1]] = {
+                //             title: "Aircraft information",
+                //             content:
+                //                 `<ul><li>Icao24: ${attributes[vectors[i][1]].Icao24}</li>` +
+                //                 `<li>Callsign: ${attributes[vectors[i][1]].Callsign}</li>` +
+                //                 `<li>Origin_country: ${attributes[vectors[i][1]].Origin_country}</li>` +
+                //                 `<li>Longitude: ${attributes[vectors[i][1]].Longitude}</li>` +
+                //                 `<li>Latitude: ${attributes[vectors[i][1]].Latitude}</li>` +
+                //                 `<li>Baro_altitude: ${attributes[vectors[i][1]].Baro_altitude}</li>` +
+                //                 `<li>Velocity: ${attributes[vectors[i][1]].Velocity}</li>`
+                //         };
+                //
+                //         pointGraphics[vectors[i][1]] = new Graphic({
+                //             geometry: points[vectors[i][1]],
+                //             symbol: marker,
+                //             attributes: attributes[vectors[i][1]],
+                //             popupTemplate: popupTemplates[vectors[i][1]]
+                //         });
+                //     };
+                //
+                //     for (var key in pointGraphics) {
+                //         graphicLayer.add(pointGraphics[key])
+                //     };
+                // };
 
-                view.whenLayerView(graphicLayer).then(function (layerView) {
-                    let highlight;
-                    view.on("pointer-move", function (event) {
-                        view.hitTest(event).then(function (response) {
-                            let results = response.results;
-                            let result = results[0];
-                            highlight && highlight.remove();
-                            if (result) {
-                                feature.graphic = result.graphic;
-                                highlight = layerView.highlight(result.graphic);
-                            } else {
-                                feature.graphic = graphic;
-                            }
-                        });
-                    });
-                });
+
+
+
+                // const graphic = {
+                //     popupTemplate: {
+                //     content: "Mouse over features to show details..."
+                //     }
+                // };
+                //
+                // const feature = new Feature({
+                //     container: "feature-node",
+                //     graphic: graphic,
+                //     map: view.map,
+                //     spatialReference: view.spatialReference
+                // });
+                //
+                // view.whenLayerView(graphicLayer).then(function (layerView) {
+                //     let highlight;
+                //     view.on("pointer-move", function (event) {
+                //         view.hitTest(event).then(function (response) {
+                //             let results = response.results;
+                //             let result = results[0];
+                //             highlight && highlight.remove();
+                //             if (result) {
+                //                 feature.graphic = result.graphic;
+                //                 highlight = layerView.highlight(result.graphic);
+                //             } else {
+                //                 feature.graphic = graphic;
+                //             }
+                //         });
+                //     });
+                // });
 
             });
     </script>
