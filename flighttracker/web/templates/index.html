@@ -238,14 +238,11 @@
                     featureLayer.queryFeatures().then(function (results) {
                         const deleteEdits = {
                             deleteFeatures: results.features
-                        }
+                        };
                         applyEditsToLayer(deleteEdits).then(() => {
-                            console.log("starting add features")
+                            console.log("starting add features");
                             if (callback) {
-                                console.log("arguments: " + arguments);
-                                console.log("arguments[0]: " + arguments[0]);
-                                console.log("arguments[1]: " + arguments[1]);
-                                callback(arguments[1]);
+                                callback ();
                             }
                         })
                     });
@@ -256,15 +253,13 @@
                         addFeatures: []
                     };
 
-                    console.log("pointGraphics inside addFeatures(): " + graphics);
+                    console.log("graphics length: " + graphics.length);
 
                     if (graphics) {
                         graphics.forEach(function (item) {
                             addEdits.addFeatures.push(item)
                         })
                     }
-
-                    console.log("addFeatures: " + addEdits.addFeatures)
 
                     applyEditsToLayer(addEdits);
                 }
@@ -324,7 +319,9 @@
                     addVectors(vectors).then((graphics) => {
                         console.log("addVectors finished")
                         console.log("pointGraphics inside updateGraphics(): " + graphics);
-                        removeFeatures(addFeatures, graphics);
+                        removeFeatures (function () {
+                            addFeatures (graphics);
+                        })
                     })
                 };
 
