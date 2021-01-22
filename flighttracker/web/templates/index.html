@@ -72,11 +72,14 @@
             height: 100%;
             padding: 0em;
             z-index: 2;
-            color: inherit;
+            color: white;
             background: rgba(18, 20, 21, 0.5)
         }
-        .esri-feature__size-container {
-            padding: 20px;
+        /*.esri-feature__size-container {*/
+        /*    padding: 20px;*/
+        /*}*/
+        .esri-widget {
+            color: white;
         }
         .footer {
             text-align: center;
@@ -102,8 +105,9 @@
             "esri/views/MapView",
             "esri/Graphic",
             "esri/widgets/Feature",
+            "esri/PopupTemplate",
             "esri/layers/FeatureLayer"
-            ], function(Map, MapView, Graphic, Feature, FeatureLayer) {
+            ], function(Map, MapView, Graphic, Feature, PopupTemplate, FeatureLayer) {
 
                 var map = new Map({
                     basemap: "dark-gray-vector"
@@ -119,8 +123,9 @@
                     },
                     highlightOptions: {
                         color: [255, 255, 255, 1],
-                        haloOpacity: 0.5,
-                        fillOpacity: 0.5
+                        haloColor: [123, 229, 224, 1],
+                        haloOpacity: 1,
+                        fillOpacity: 0.7
                     }
                 });
 
@@ -134,6 +139,9 @@
                     name: "Icao24",
                     type: "oid"
                 }, {
+                    name: "Callsign",
+                    type: "string"
+                }, {
                     name: "Origin_country",
                     type: "string"
                 }, {
@@ -141,6 +149,12 @@
                     type: "double"
                 }, {
                     name: "Latitude",
+                    type: "double"
+                }, {
+                    name: "Baro_altitude",
+                    type: "double"
+                }, {
+                    name: "Velocity",
                     type: "double"
                 }, {
                     name: "True_track",
@@ -158,8 +172,8 @@
                 };
 
                 let points = {};
-                let pointGraphics = {};
-                let attributes = {};
+                let pointGraphics;
+                let attributes;
                 let popupTemplates = {};
 
                 const vector = {
@@ -178,19 +192,47 @@
 
                 attributes = {
                     Icao24: vector.Icao24,
+                    Callsign: vector.Callsign,
                     Origin_country: vector["Origin_country"],
                     Longitude: vector["Longitude"],
                     Latitude: vector["Latitude"],
-                    True_track: vector["True_track"]
+                    True_track: vector["True_track"],
+                    Baro_altitude: vector["Baro_altitude"],
+                    Velocity: vector["Velocity"]
                 };
+
+                pt = new PopupTemplate ({
+                    title: "Aircraft information",
+                    content: [{
+                        type: "fields",
+                        fieldInfos: [{
+                            fieldName: "Icao24"
+                        }, {
+                            fieldName: "Callsign"
+                        }, {
+                            fieldName: "Origin_country"
+                        }, {
+                            fieldName: "Longitude"
+                        }, {
+                            fieldName: "Latitude"
+                        }, {
+                            fieldName: "Baro_altitude"
+                        }, {
+                            fieldName: "Velocity"
+                        }, {
+                            fieldName: "True_track"
+                        }]
+                    }],
+                });
 
                 pointGraphics = new Graphic({
                     geometry: points,
                     symbol: marker,
-                    attributes: attributes
+                    attributes: attributes,
+                    popupTemplate: pt
                 });
 
-                featureLayer = new FeatureLayer({
+                let featureLayer = new FeatureLayer({
                     source: [pointGraphics],
                     supportsEditing: true,
                     supportsAdd: true,
@@ -200,7 +242,9 @@
                     geometryType: "point",
                     spatialReference: {
                         wkid: 3857
-                    }
+                    },
+                    popupEnabled: true,
+                    popupTemplate: pt
                 });
 
                 map.add(featureLayer);
@@ -265,12 +309,15 @@
                 }
 
                 async function addVectors(vectors) {
-                    let attributes = {};
-                    let pointGraphics = [];
-                    console.log("first vector: " + vectors[0])
-                    const vectorQuantity = vectors.length;
+                    points = {};
+                    attributes = {};
+                    pointGraphics = [];
+
+                    let vectorQuantity = vectors.length;
                     console.log("time = "+ vectors[0][0] + ", vectorQuantity: " + vectorQuantity);
+
                     for (let i = 0; i < vectorQuantity; i ++) {
+
                         points[vectors[i][1]] = {
                             type: "point",
                             longitude: vectors[i][6],
@@ -290,27 +337,16 @@
                             Geo_altitude: vectors[i][14]
                         };
 
-                        popupTemplates[vectors[i][1]] = {
-                            title: "Aircraft information",
-                            content:
-                                `<ul><li>Icao24: ${attributes[vectors[i][1]].Icao24}</li>` +
-                                `<li>Callsign: ${attributes[vectors[i][1]].Callsign}</li>` +
-                                `<li>Origin_country: ${attributes[vectors[i][1]].Origin_country}</li>` +
-                                `<li>Longitude: ${attributes[vectors[i][1]].Longitude}</li>` +
-                                `<li>Latitude: ${attributes[vectors[i][1]].Latitude}</li>` +
-                                `<li>Baro_altitude: ${attributes[vectors[i][1]].Baro_altitude}</li>` +
-                                `<li>Velocity: ${attributes[vectors[i][1]].Velocity}</li></ul>`
-                        };
-
                         pointGraphics.push(
                             new Graphic({
                                 geometry: points[vectors[i][1]],
                                 symbol: marker,
                                 attributes: attributes[vectors[i][1]],
-                                popupTemplate: popupTemplates[vectors[i][1]]
+                                popupTemplate: pt
                             })
                         );
                     }
+
                     return pointGraphics
                 }
 
@@ -324,6 +360,36 @@
                         })
                     })
                 };
+
+                const graphic = {
+                    popupTemplate: {
+                        content: "Mouse over features to show details..."
+                    }
+                };
+
+                const feature = new Feature({
+                    container: "feature-node",
+                    graphic: graphic,
+                    map: view.map,
+                    spatialReference: view.spatialReference
+                });
+
+                view.whenLayerView(featureLayer).then(function (layerView) {
+                    let highlight;
+                    view.on("pointer-move", function (event) {
+                        view.hitTest(event).then(function (response) {
+                            let results = response.results;
+                            let result = results[0];
+                            highlight && highlight.remove();
+                            if (result) {
+                                feature.graphic = result.graphic;
+                                highlight = layerView.highlight(result.graphic);
+                            } else {
+                                feature.graphic = graphic;
+                            }
+                        });
+                    });
+                });
 
                 // updateGraphics = function (vectors) {
                 //     graphicLayer.removeAll();
@@ -375,39 +441,6 @@
                 //         graphicLayer.add(pointGraphics[key])
                 //     };
                 // };
-
-
-
-
-                // const graphic = {
-                //     popupTemplate: {
-                //     content: "Mouse over features to show details..."
-                //     }
-                // };
-                //
-                // const feature = new Feature({
-                //     container: "feature-node",
-                //     graphic: graphic,
-                //     map: view.map,
-                //     spatialReference: view.spatialReference
-                // });
-                //
-                // view.whenLayerView(graphicLayer).then(function (layerView) {
-                //     let highlight;
-                //     view.on("pointer-move", function (event) {
-                //         view.hitTest(event).then(function (response) {
-                //             let results = response.results;
-                //             let result = results[0];
-                //             highlight && highlight.remove();
-                //             if (result) {
-                //                 feature.graphic = result.graphic;
-                //                 highlight = layerView.highlight(result.graphic);
-                //             } else {
-                //                 feature.graphic = graphic;
-                //             }
-                //         });
-                //     });
-                // });
 
             });
     </script>
