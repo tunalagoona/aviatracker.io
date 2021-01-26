@@ -340,27 +340,49 @@
                 }
             });
 
-            function shuffleArray(array) {
-                for (var i = array.length - 1; i > 0; i--) {
-                    var j = Math.floor(Math.random() * (i + 1));
-                    var temp = array[i];
-                    array[i] = array[j];
-                    array[j] = temp;
-                }
-            }
+            let zoom = 0;
+
+            view.watch("zoom", function () {
+                zoom = view.zoom;
+                console.log("zoom = " + zoom);
+            })
+
+            let xMin;
+            let yMin;
+            let xMax;
+            let yMax;
+
+            view.watch("extent", function () {
+                xMin = view.extent.xmin.toFixed(2);
+                yMin = view.extent.ymin.toFixed(2);
+                xMax = view.extent.xmax.toFixed(2);
+                yMax = view.extent.ymax.toFixed(2);
+
+                console.log("xmin = " + xMin + ", xmax = " + xMax);
+                console.log("ymin = " + yMin + ", ymax = " + yMax);
+            });
+
+
+            // function shuffleArray(array) {
+            //     for (var i = array.length - 1; i > 0; i--) {
+            //         var j = Math.floor(Math.random() * (i + 1));
+            //         var temp = array[i];
+            //         array[i] = array[j];
+            //         array[j] = temp;
+            //     }
+            // }
 
             function hashFunction (str) {
-                let hash = 0;
-                let len = str.length;
+                let h = 0, i = 0, len = str.length;
                 if (len === 0) {
-                    return hash;
+                    return h;
                 }
-                let sum = 0
-                for (let i = 0; i < len; i++) {
+                while (i < len) {
                     let char = str.charCodeAt(i);
-                    sum = sum + char;
+                    h = (h * 31) + char;
+                    i++;
                 }
-                return sum % 20;
+                return h % 128;
             }
 
             let hashes = [];
