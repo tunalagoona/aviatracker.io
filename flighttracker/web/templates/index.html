@@ -100,8 +100,9 @@
             "esri/Graphic",
             "esri/widgets/Feature",
             "esri/PopupTemplate",
-            "esri/layers/FeatureLayer"
-        ], function(Map, MapView, Graphic, Feature, PopupTemplate, FeatureLayer) {
+            "esri/layers/FeatureLayer",
+            "esri/geometry/support/webMercatorUtils"
+        ], function(Map, MapView, Graphic, Feature, PopupTemplate, FeatureLayer, webMercatorUtils) {
 
             var map = new Map({
                 basemap: "dark-gray-vector"
@@ -177,13 +178,14 @@
             var time_delta;
             var time_add_starts;
             var time_delta_to_add;
+            let vectors;
 
             const vector = {
                 Icao24: "XXXXX",
                 Callsign: "callsi",
                 Origin_country: "Tralyandiya",
-                Longitude: 0,
-                Latitude: 20,
+                Longitude: 50,
+                Latitude: 50,
                 True_track: 0,
                 Baro_altitude: 600,
                 Velocity: 59
@@ -198,12 +200,12 @@
             attributes = {
                 Icao24: vector.Icao24,
                 Callsign: vector.Callsign,
-                Origin_country: vector["Origin_country"],
-                Longitude: vector["Longitude"],
-                Latitude: vector["Latitude"],
-                True_track: vector["True_track"],
-                Baro_altitude: vector["Baro_altitude"],
-                Velocity: vector["Velocity"]
+                Origin_country: vector.Origin_country,
+                Longitude: vector.Longitude,
+                Latitude: vector.Latitude,
+                True_track: vector.True_track,
+                Baro_altitude: vector.Baro_altitude,
+                Velocity: vector.Velocity
             };
 
             pt = new PopupTemplate ({
@@ -252,6 +254,7 @@
                 popupTemplate: pt
             });
 
+
             async function applyEditsToLayer(edits) {
                 featureLayer
                     .applyEdits(edits)
@@ -260,7 +263,7 @@
                             remove_time = Date.now();
                             console.log(
                                 results.deleteFeatureResults.length,
-                                "features have been removed"
+                                "objects have been removed"
                             );
                         }
                         if (results.addFeatureResults.length > 0) {
@@ -276,13 +279,12 @@
                                 .then(function (results) {
                                     console.log(
                                         results.features.length +
-                                        " features have been added"
+                                        " objects have been added"
                                     );
                                 });
                             time_delta = add_time - remove_time;
                             time_delta_to_add = add_time - time_add_starts;
-                            console.log("time delta between add and removed events were finished: " + time_delta + " ms");
-                            console.log("time interval needed to add features: " + time_delta_to_add);
+                            console.log("time interval needed to add features: " + time_delta_to_add + " ms");
                         }
                     })
             }
@@ -318,8 +320,6 @@
             map.add(featureLayer);
             removeFeatures();
 
-            let hashQuantity;
-
             view.watch("scale", function (newValue) {
                 if (newValue <= 50000000) {
                     if (newValue <= 20000000) {
@@ -353,24 +353,14 @@
             let yMax;
 
             view.watch("extent", function () {
-                xMin = view.extent.xmin.toFixed(2);
-                yMin = view.extent.ymin.toFixed(2);
-                xMax = view.extent.xmax.toFixed(2);
-                yMax = view.extent.ymax.toFixed(2);
+                xMin = parseFloat(view.extent.xmin.toFixed(2));
+                yMin = parseFloat(view.extent.ymin.toFixed(2));
+                xMax = parseFloat(view.extent.xmax.toFixed(2));
+                yMax = parseFloat(view.extent.ymax.toFixed(2));
 
                 console.log("xmin = " + xMin + ", xmax = " + xMax);
                 console.log("ymin = " + yMin + ", ymax = " + yMax);
             });
-
-
-            // function shuffleArray(array) {
-            //     for (var i = array.length - 1; i > 0; i--) {
-            //         var j = Math.floor(Math.random() * (i + 1));
-            //         var temp = array[i];
-            //         array[i] = array[j];
-            //         array[j] = temp;
-            //     }
-            // }
 
             function hashFunction (str) {
                 let h = 0, i = 0, len = str.length;
@@ -380,83 +370,113 @@
                 while (i < len) {
                     let char = str.charCodeAt(i);
                     h = (h * 31) + char;
-                    i++;
+                    i ++;
                 }
-                return h % 128;
+                return (h % Object.keys(vectorHashes).length);
             }
 
-            let hashes = [];
-            let hashQuantityMemo = 0;
+            let vectorQuantity = 0;
+            let vectorHashes;
 
-            async function addVectors(vectors) {
+            async function makeHashTable (vectorQuantity, vectors) {
+                for (let i = 0; i < vectorQuantity; i ++) {
+                    let id = vectors[i]['icao24'];
+                    let hash = hashFunction(id);
+                    vectorHashes[hash].push(vectors[i]);
+                }
+                console.log("makeHashTable finished");
+            }
+
+            async function pointSelection (vectorHashes) {
+                let maxPointQuantity = 200;
+                let pointsToRender = [];
+                let pointsCount = 0;
                 points = {};
                 attributes = {};
-                pointGraphics = [];
+                let pointGraphic;
 
-                let vectorQuantity = vectors.length;
-                console.log("time = "+ vectors[0][0] + ", vectorQuantity: " + vectorQuantity);
+                for (let i = 0; i < Object.keys(vectorHashes).length; i ++) {
+                    if (pointsCount > maxPointQuantity) {
+                        console.log("pointsCount final: " + pointsCount);
+                        console.log("pointSelection finished");
+                        return pointsToRender;
+                    }
 
-                shuffleArray (vectors);
+                    for (let j = 0; j < vectorHashes[i].length; j ++) {
 
-                let icaoHash = [];
+                        let long = vectorHashes[i][j]['longitude'];
+                        let lat = vectorHashes[i][j]['latitude'];
 
-                for (let i = 0; i < vectorQuantity; i ++) {
-                    icaoHash.push(hashFunction (vectors[i][1]));
-                }
+                        let coords = webMercatorUtils.lngLatToXY(long, lat);
 
-                if (hashQuantity !== hashQuantityMemo) {
-                    hashes = [];
-                    for (let i = 0; i < hashQuantity; i ++) {
-                        let num = -1;
-                        while ((num < 0) || (num in hashes)) {
-                            num = Math.floor(Math.random() * 20);
+                        long = parseFloat(coords[0].toFixed(2));
+                        lat = parseFloat(coords[1].toFixed(2));
+
+                        if (
+                            (lat > yMin) && (lat < yMax) &&
+                            (long > xMin) && (long < xMax)
+                        ) {
+
+                            let id = vectorHashes[i][j]['icao24'];
+
+                            points[id] = {
+                                type: "point",
+                                longitude: vectorHashes[i][j]['longitude'],
+                                latitude: vectorHashes[i][j]['latitude']
+                            };
+
+                            attributes[id] = {
+                                Icao24: vectorHashes[i][j]['icao24'],
+                                Callsign: vectorHashes[i][j]['callsign'],
+                                Origin_country: vectorHashes[i][j]['origin_country'],
+                                Longitude: vectorHashes[i][j]['longitude'],
+                                Latitude: vectorHashes[i][j]['latitude'],
+                                Baro_altitude: vectorHashes[i][j]['baro_altitude'],
+                                Velocity: vectorHashes[i][j]['velocity'],
+                                True_track: vectorHashes[i][j]['true_track'],
+                                Vertical_rate: vectorHashes[i][j]['vertical_rate'],
+                                Geo_altitude: vectorHashes[i][j]['geo_altitude']
+                            };
+
+                            pointGraphic = new Graphic({
+                                geometry: points[id],
+                                symbol: marker,
+                                attributes: attributes[id],
+                                popupTemplate: pt
+                            });
+
+                            pointsCount ++;
+                            pointsToRender.push(pointGraphic);
                         }
-                        hashes.push(num);
                     }
                 }
+                return pointsToRender;
+            }
 
-                console.log("hashes: " + hashes);
-                hashQuantityMemo = hashQuantity;
+            async function buildHashTableStructure (hashQuantity) {
+                vectorHashes = {};
+                for (let i = 0; i < hashQuantity; i ++) {
+                    vectorHashes[i] = [];
+                }
+                console.log("buildHashTableStructure finished");
+            }
 
-                for (let i = 0; i < vectorQuantity; i ++) {
-                    if (hashes.includes(icaoHash[i]) === false) {
-                        continue;
-                    }
-
-                    points[vectors[i][1]] = {
-                        type: "point",
-                        longitude: vectors[i][6],
-                        latitude: vectors[i][7]
-                    };
-
-                    attributes[vectors[i][1]] = {
-                        Icao24: vectors[i][1],
-                        Callsign: vectors[i][2],
-                        Origin_country: vectors[i][3],
-                        Longitude: vectors[i][6],
-                        Latitude: vectors[i][7],
-                        Baro_altitude: vectors[i][8],
-                        Velocity: vectors[i][10],
-                        True_track: vectors[i][11],
-                        Vertical_rate: vectors[i][12],
-                        Geo_altitude: vectors[i][14]
-                    };
-
-                    pointGraphics.push(
-                        new Graphic({
-                            geometry: points[vectors[i][1]],
-                            symbol: marker,
-                            attributes: attributes[vectors[i][1]],
-                            popupTemplate: pt
+            async function addVectors(vectors) {
+                vectorQuantity = vectors.length;
+                console.log("time = "+ vectors[0]['request_time'] + ", vectorQuantity: " + vectorQuantity);
+                buildHashTableStructure(128).then(() => {
+                    makeHashTable(vectorQuantity, vectors).then(() => {
+                        pointSelection(vectorHashes).then((points) => {
+                            return points;
                         })
-                    );
-                }
-
-                return pointGraphics
+                    })
+                })
             }
 
             updateGraphics = function (data) {
-                addVectors(data).then((graphics) => {
+                vectors = data;
+                addVectors(vectors).then((graphics) => {
+                    console.log("graphics returned from add Vectors: " + graphics);
                     removeFeatures (function () {
                         addFeatures (graphics);
                     })
