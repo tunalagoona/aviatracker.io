@@ -104,11 +104,20 @@
             "esri/geometry/support/webMercatorUtils"
         ], function(Map, MapView, Graphic, Feature, PopupTemplate, FeatureLayer, webMercatorUtils) {
 
-            var map = new Map({
+            let vectorBuckets = {};
+            let graphicObjects = {};
+            let extentCoords = {
+                xMin: 0,
+                xMax: 0,
+                yMin: 0,
+                yMax: 0
+            };
+            let addStarts;
+
+            let map = new Map({
                 basemap: "dark-gray-vector"
             });
-
-            var view = new MapView({
+            let view = new MapView({
                 container: "viewDiv",
                 map: map,
                 center: [50, 50], // longitude, latitude
@@ -126,39 +135,38 @@
                     minScale: 100001000
                 }
             });
-
-            var marker = {
+            let marker = {
                 type: "picture-marker",
                 url: "{{  url_for('static', filename='icon.svg') }}",
                 angle: 0
             };
-
-            let fields = [{
-                name: "Icao24",
-                type: "oid"
-            }, {
-                name: "Callsign",
-                type: "string"
-            }, {
-                name: "Origin_country",
-                type: "string"
-            }, {
-                name: "Longitude",
-                type: "double"
-            }, {
-                name: "Latitude",
-                type: "double"
-            }, {
-                name: "Baro_altitude",
-                type: "double"
-            }, {
-                name: "Velocity",
-                type: "double"
-            }, {
-                name: "True_track",
-                type: "double"
-            }];
-
+            let fields = [
+                {
+                    name: "Icao24",
+                    type: "oid"
+                }, {
+                    name: "Callsign",
+                    type: "string"
+                }, {
+                    name: "Origin_country",
+                    type: "string"
+                }, {
+                    name: "Longitude",
+                    type: "double"
+                }, {
+                    name: "Latitude",
+                    type: "double"
+                }, {
+                    name: "Baro_altitude",
+                    type: "double"
+                }, {
+                    name: "Velocity",
+                    type: "double"
+                }, {
+                    name: "True_track",
+                    type: "double"
+                }
+            ];
             let rotationRenderer = {
                 type: "simple",
                 symbol: marker,
@@ -168,47 +176,7 @@
                     rotationType: "geographic"
                 }
             };
-
-            let points = {};
-            let pointGraphics = [];
-            var attributes;
-            var pt = {};
-            var remove_time;
-            var add_time;
-            var time_delta;
-            var time_add_starts;
-            var time_delta_to_add;
-            let vectors;
-
-            const vector = {
-                Icao24: "XXXXX",
-                Callsign: "callsi",
-                Origin_country: "Tralyandiya",
-                Longitude: 50,
-                Latitude: 50,
-                True_track: 0,
-                Baro_altitude: 600,
-                Velocity: 59
-            };
-
-            points = {
-                type: "point",
-                longitude: vector["Longitude"],
-                latitude: vector["Latitude"]
-            };
-
-            attributes = {
-                Icao24: vector.Icao24,
-                Callsign: vector.Callsign,
-                Origin_country: vector.Origin_country,
-                Longitude: vector.Longitude,
-                Latitude: vector.Latitude,
-                True_track: vector.True_track,
-                Baro_altitude: vector.Baro_altitude,
-                Velocity: vector.Velocity
-            };
-
-            pt = new PopupTemplate ({
+            let popup = new PopupTemplate ({
                 title: "Aircraft information",
                 content: [{
                     type: "fields",
@@ -232,15 +200,45 @@
                 }],
             });
 
-            pointGraphics = new Graphic({
-                geometry: points,
-                symbol: marker,
-                attributes: attributes,
-                popupTemplate: pt
-            });
+            function aircraftToGraphics (aircraft) {
+
+                let point = {
+                    type: "point",
+                    longitude: aircraft.longitude,
+                    latitude: aircraft.latitude
+                };
+                let attributes = {
+                    Icao24: aircraft.icao24,
+                    Callsign: aircraft.callsign,
+                    Origin_country: aircraft.originCountry,
+                    Longitude: aircraft.longitude,
+                    Latitude: aircraft.latitude,
+                    True_track: aircraft.trueTrack,
+                    Baro_altitude: aircraft.baroAltitude,
+                    Velocity: aircraft.velocity
+                };
+                return new Graphic({
+                    geometry: point,
+                    symbol: marker,
+                    attributes: attributes,
+                    popupTemplate: popup
+                })
+            }
+
+            const aircraft = {
+                icao24: "XXXXX",
+                callsign: "XXXXX",
+                originCountry: "XXXXX",
+                longitude: 50,
+                latitude: 50,
+                trueTrack: 0,
+                baroAltitude: 0,
+                velocity: 0
+            };
+            let graphics = aircraftToGraphics(aircraft);
 
             let featureLayer = new FeatureLayer({
-                source: [pointGraphics],
+                source: [graphics],
                 supportsEditing: true,
                 supportsAdd: true,
                 fields: fields,
@@ -251,23 +249,33 @@
                     wkid: 3857
                 },
                 popupEnabled: true,
-                popupTemplate: pt
+                popupTemplate: popup
             });
 
+            const graphic = {
+                popupTemplate: {
+                    content: "Mouse over features to show details..."
+                }
+            };
+            const feature = new Feature({
+                container: "feature-node",
+                graphic: graphic,
+                map: view.map,
+                spatialReference: view.spatialReference
+            });
 
             async function applyEditsToLayer(edits) {
                 featureLayer
                     .applyEdits(edits)
                     .then(function (results) {
                         if (results.deleteFeatureResults.length > 0) {
-                            remove_time = Date.now();
                             console.log(
                                 results.deleteFeatureResults.length,
                                 "objects have been removed"
                             );
                         }
                         if (results.addFeatureResults.length > 0) {
-                            add_time = Date.now();
+                            let add_finished = Date.now();
                             let objectIds = [];
                             results.addFeatureResults.forEach(function (item) {
                                 objectIds.push(item.objectId);
@@ -282,220 +290,56 @@
                                         " objects have been added"
                                     );
                                 });
-                            time_delta = add_time - remove_time;
-                            time_delta_to_add = add_time - time_add_starts;
-                            console.log("time interval needed to add features: " + time_delta_to_add + " ms");
+                            let time_delta = add_finished - addStarts;
+                            console.log("time interval needed to add features: " + time_delta + " ms");
                         }
                     })
             }
-
-            let removeFeatures = async (callback) => {
-                featureLayer.queryFeatures().then(function (results) {
-                    const deleteEdits = {
-                        deleteFeatures: results.features
+            let removeFeatures = async (graphics, callback) => {
+                let deleteEdits;
+                if (graphics.length !== 0) {
+                    deleteEdits = {
+                        deleteFeatures: graphics
                     };
-                    applyEditsToLayer(deleteEdits).then(() => {
-                        time_add_starts = Date.now();
-                        if (callback) {
-                            callback ();
-                        }
-                    })
-                });
-            }
-
-            function addFeatures(graphics) {
-                const addEdits = {
-                    addFeatures: []
-                };
-
-                if (graphics) {
-                    graphics.forEach(function (item) {
-                        addEdits.addFeatures.push(item)
+                } else {
+                    featureLayer.queryFeatures().then(function (results) {
+                        deleteEdits = {
+                            deleteFeatures: results.features
+                        };
                     })
                 }
-
+                applyEditsToLayer(deleteEdits).then(() => {
+                    addStarts = Date.now();
+                    if (callback) {
+                        callback ();
+                    }
+                })
+            }
+            function addFeatures(graphics) {
+                addObjects = {
+                    addFeatures: []
+                };
+                if (graphics) {
+                    graphics.forEach(function (item) {
+                        addObjects.addFeatures.push(item)
+                    })
+                }
                 applyEditsToLayer(addEdits);
             }
 
             map.add(featureLayer);
             removeFeatures();
 
-            view.watch("scale", function (newValue) {
-                if (newValue <= 50000000) {
-                    if (newValue <= 20000000) {
-                        if (newValue <= 5000000) {
-                            hashQuantity = 20;
-                            console.log("scale < 5 000 000");
-                        } else {
-                            hashQuantity = 10;
-                            console.log("20 000 000 > scale > 5 000 000");
-                        }
-                    } else {
-                        hashQuantity = 5;
-                        console.log("50 000 000 > scale > 20 000 000");
-                    }
-                } else {
-                    hashQuantity = 1;
-                    console.log("scale > 50 000 000");
-                }
-            });
-
-            let zoom = 0;
-
-            view.watch("zoom", function () {
-                zoom = view.zoom;
-                console.log("zoom = " + zoom);
-            })
-
-            let xMin;
-            let yMin;
-            let xMax;
-            let yMax;
-
             view.watch("extent", function () {
-                xMin = parseFloat(view.extent.xmin.toFixed(2));
-                yMin = parseFloat(view.extent.ymin.toFixed(2));
-                xMax = parseFloat(view.extent.xmax.toFixed(2));
-                yMax = parseFloat(view.extent.ymax.toFixed(2));
+                extentCoords.xMin = parseFloat(view.extent.xmin.toFixed(2));
+                extentCoords.yMin = parseFloat(view.extent.ymin.toFixed(2));
+                extentCoords.xMax = parseFloat(view.extent.xmax.toFixed(2));
+                extentCoords.yMax = parseFloat(view.extent.ymax.toFixed(2));
 
                 console.log("xmin = " + xMin + ", xmax = " + xMax);
                 console.log("ymin = " + yMin + ", ymax = " + yMax);
+                render(vectorBuckets, extentCoords, true)
             });
-
-            function hashFunction (str) {
-                let h = 0, i = 0, len = str.length;
-                if (len === 0) {
-                    return h;
-                }
-                while (i < len) {
-                    let char = str.charCodeAt(i);
-                    h = (h * 31) + char;
-                    i ++;
-                }
-                return (h % Object.keys(vectorHashes).length);
-            }
-
-            let vectorQuantity = 0;
-            let vectorHashes;
-
-            async function makeHashTable (vectorQuantity, vectors) {
-                for (let i = 0; i < vectorQuantity; i ++) {
-                    let id = vectors[i]['icao24'];
-                    let hash = hashFunction(id);
-                    vectorHashes[hash].push(vectors[i]);
-                }
-                console.log("makeHashTable finished");
-            }
-
-            async function pointSelection (vectorHashes) {
-                let maxPointQuantity = 200;
-                let pointsToRender = [];
-                let pointsCount = 0;
-                points = {};
-                attributes = {};
-                let pointGraphic;
-
-                for (let i = 0; i < Object.keys(vectorHashes).length; i ++) {
-                    if (pointsCount > maxPointQuantity) {
-                        console.log("pointsCount final: " + pointsCount);
-                        console.log("pointSelection finished");
-                        return pointsToRender;
-                    }
-
-                    for (let j = 0; j < vectorHashes[i].length; j ++) {
-
-                        let long = vectorHashes[i][j]['longitude'];
-                        let lat = vectorHashes[i][j]['latitude'];
-
-                        let coords = webMercatorUtils.lngLatToXY(long, lat);
-
-                        long = parseFloat(coords[0].toFixed(2));
-                        lat = parseFloat(coords[1].toFixed(2));
-
-                        if (
-                            (lat > yMin) && (lat < yMax) &&
-                            (long > xMin) && (long < xMax)
-                        ) {
-
-                            let id = vectorHashes[i][j]['icao24'];
-
-                            points[id] = {
-                                type: "point",
-                                longitude: vectorHashes[i][j]['longitude'],
-                                latitude: vectorHashes[i][j]['latitude']
-                            };
-
-                            attributes[id] = {
-                                Icao24: vectorHashes[i][j]['icao24'],
-                                Callsign: vectorHashes[i][j]['callsign'],
-                                Origin_country: vectorHashes[i][j]['origin_country'],
-                                Longitude: vectorHashes[i][j]['longitude'],
-                                Latitude: vectorHashes[i][j]['latitude'],
-                                Baro_altitude: vectorHashes[i][j]['baro_altitude'],
-                                Velocity: vectorHashes[i][j]['velocity'],
-                                True_track: vectorHashes[i][j]['true_track'],
-                                Vertical_rate: vectorHashes[i][j]['vertical_rate'],
-                                Geo_altitude: vectorHashes[i][j]['geo_altitude']
-                            };
-
-                            pointGraphic = new Graphic({
-                                geometry: points[id],
-                                symbol: marker,
-                                attributes: attributes[id],
-                                popupTemplate: pt
-                            });
-
-                            pointsCount ++;
-                            pointsToRender.push(pointGraphic);
-                        }
-                    }
-                }
-                return pointsToRender;
-            }
-
-            async function buildHashTableStructure (hashQuantity) {
-                vectorHashes = {};
-                for (let i = 0; i < hashQuantity; i ++) {
-                    vectorHashes[i] = [];
-                }
-                console.log("buildHashTableStructure finished");
-            }
-
-            async function addVectors(vectors) {
-                vectorQuantity = vectors.length;
-                console.log("time = "+ vectors[0]['request_time'] + ", vectorQuantity: " + vectorQuantity);
-                buildHashTableStructure(128).then(() => {
-                    makeHashTable(vectorQuantity, vectors).then(() => {
-                        pointSelection(vectorHashes).then((points) => {
-                            return points;
-                        })
-                    })
-                })
-            }
-
-            updateGraphics = function (data) {
-                vectors = data;
-                addVectors(vectors).then((graphics) => {
-                    console.log("graphics returned from add Vectors: " + graphics);
-                    removeFeatures (function () {
-                        addFeatures (graphics);
-                    })
-                })
-            };
-
-            const graphic = {
-                popupTemplate: {
-                    content: "Mouse over features to show details..."
-                }
-            };
-
-            const feature = new Feature({
-                container: "feature-node",
-                graphic: graphic,
-                map: view.map,
-                spatialReference: view.spatialReference
-            });
-
             view.whenLayerView(featureLayer).then(function (layerView) {
                 let highlight;
                 view.on("pointer-move", function (event) {
@@ -512,6 +356,93 @@
                     });
                 });
             });
+
+            function calculateHash (str) {
+                let quantity = Object.keys(vectorBuckets).length;
+                let h = 0, i = 0, len = str.length;
+                if (len === 0) {
+                    return h;
+                }
+                while (i < len) {
+                    let char = str.charCodeAt(i);
+                    h = (((h << 5) - h) + char) % quantity;
+                    i ++;
+                }
+                return (h % quantity);
+            }
+
+            function bucketize (aircrafts) {
+                let buckets = {};
+                for (let i = 0; i < 128; i ++) {
+                    buckets[i] = [];
+                }
+                aircrafts.forEach(aircraft => {
+                    let hash = calculateHash(aircraft['icao24']);
+                    buckets[hash].push(aircraft);
+                })
+                return buckets
+            }
+
+            function selectPoints(buckets, extent) {
+                let graphics = {};
+                let icaoToRender = new Set ();
+                const maxPointQuantity = 200;
+                let count = 0;
+                for (let bucket in buckets) {
+                    if (count > maxPointQuantity) {
+                        console.log("Final quantity of points for rendering: " + count);
+                        break;
+                    }
+                    bucket.forEach(aircraft => {
+                        let long = aircraft['longitude'];
+                        let lat = aircraft['latitude'];
+                        let coords = webMercatorUtils.lngLatToXY(long, lat);
+                        long = parseFloat(coords[0].toFixed(2));
+                        lat = parseFloat(coords[1].toFixed(2));
+
+                        if (
+                            (lat > extent.yMin) && (lat < extent.yMax) &&
+                            (long > extent.xMin) && (long < extent.xMax)
+                        ) {
+                            let id = aircraft['icao24'];
+                            graphics[id] = aircraftToGraphics(aircraft);
+                            count++;
+                            icaoToRender.add(id);
+                        }
+                    })
+                }
+                return [icaoToRender, graphics];
+            }
+
+            function render (buckets, currentExtent, partial = false) {
+                let result = selectPoints(buckets, currentExtent);
+                let icaos = result[0];
+                let graphics = result[1];
+
+                let deleteObjects = [];
+                let addObjects = [];
+                if (partial === true) {
+                    icaos.forEach(icao => {
+                        if (!(icao in Object.keys(graphicObjects))) {
+                            addObjects.push(graphics[icao]);
+                        }
+                    });
+                    Object.keys(graphicObjects).forEach(icao => {
+                        if (!(icaos.has(icao))) {
+                            deleteObjects.push(graphicObjects[icao])
+                        }
+                    });
+                }
+                removeFeatures(deleteObjects).then(() => {
+                    addFeatures(addObjects);
+                })
+                graphicObjects = graphics;
+            }
+
+            function updateAircrafts (aircrafts) {
+                vectorBuckets = bucketize(aircrafts);
+                render(vectorBuckets, extentCoords);
+            }
         })
     </script>
     <script>
@@ -523,7 +454,7 @@
             });
 
             socket.on('message', data => {
-                updateGraphics(data);
+                updateAircrafts(data);
             });
         });
     </script>
