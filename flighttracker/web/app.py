@@ -7,6 +7,7 @@ import time
 from contextlib import closing
 import yaml
 import os
+from typing import List, Tuple, Dict
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO
@@ -60,13 +61,30 @@ def fetch_vectors(dbname, user, password, host, port) -> None:
                 f"Quantity of state vectors fetched from the DB for the time {vectors[0][0]}: "
                 f"{quantity}"
             )
-            time.sleep(10)
+            time.sleep(4)
+
+
+def make_object(vectors: List[Tuple] or None) -> List[Dict] or None:
+    if vectors is None:
+        return None
+    objects = []
+    for i in range(0, len(vectors)):
+        vector_object = {'requestTime': vectors[i][0], 'icao24': vectors[i][1], 'callsign': vectors[i][2],
+                         'originCountry': vectors[i][3], 'timePosition': vectors[i][4], 'lastContact': vectors[i][5],
+                         'longitude': vectors[i][6], 'latitude': vectors[i][7], 'baroAltitude': vectors[i][8],
+                         'onGround': vectors[i][9], 'velocity': vectors[i][10], 'trueTrack': vectors[i][11],
+                         'verticalRate': vectors[i][12], 'sensors': vectors[i][13], 'geoAltitude': vectors[i][14],
+                         'squawk': vectors[i][15], 'spi': vectors[i][16], 'positionSource': vectors[i][17]}
+
+        objects.append(vector_object)
+    return objects
 
 
 def broadcast_vectors() -> None:
     while True:
-        socketio.send(states_memo)
-        eventlet.sleep(9)
+        vector_object = make_object(states_memo)
+        socketio.send(vector_object)
+        eventlet.sleep(3)
         time.sleep(1)
 
 
