@@ -25,14 +25,14 @@
             padding: 10px;
             display: inline-block;
             vertical-align: sub;
-            text-align: middle;
+            text-align: center;
         }
         h1 {
             margin: 2px;
             display: inline-block;
             vertical-align: middle
         }
-        #about {
+        .about {
             color: inherit;
             text-decoration: none;
         }
@@ -44,7 +44,7 @@
             font-size: 22px;
         }
         .shadow {
-            box-shadow: 0px 10px 10px 0px inset rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 10px 0 inset rgba(0, 0, 0, 0.4);
             position: relative;
             margin-left: 330px;
             height: 20px;
@@ -53,7 +53,7 @@
         }
         #viewDiv {
             position: absolute;
-            padding: 0px;
+            padding: 0;
             margin-left: 330px;
             height: 96%;
             width: 77%;
@@ -64,7 +64,7 @@
             float: left;
             width: 330px;
             height: 100%;
-            padding: 0em;
+            padding: 0;
             z-index: 2;
             color: white;
             background: rgba(18, 20, 21, 0.5)
@@ -101,10 +101,11 @@
             "esri/widgets/Feature",
             "esri/PopupTemplate",
             "esri/layers/FeatureLayer",
-            "esri/geometry/support/webMercatorUtils"
-        ], function(Map, MapView, Graphic, Feature, PopupTemplate, FeatureLayer, webMercatorUtils) {
+            "esri/geometry/support/webMercatorUtils",
+            "esri/core/watchUtils"
+        ], function(Map, MapView, Graphic, Feature, PopupTemplate, FeatureLayer, webMercatorUtils, watchUtils) {
 
-            let vectorBuckets = {};
+            let buckets = [];
             let graphicObjects = {};
             let extentCoords = {
                 xMin: 0,
@@ -142,28 +143,28 @@
             };
             let fields = [
                 {
-                    name: "Icao24",
+                    name: "icao24",
                     type: "oid"
                 }, {
-                    name: "Callsign",
+                    name: "callsign",
                     type: "string"
                 }, {
-                    name: "Origin_country",
+                    name: "originCountry",
                     type: "string"
                 }, {
-                    name: "Longitude",
+                    name: "longitude",
                     type: "double"
                 }, {
-                    name: "Latitude",
+                    name: "latitude",
                     type: "double"
                 }, {
-                    name: "Baro_altitude",
+                    name: "baroAltitude",
                     type: "double"
                 }, {
-                    name: "Velocity",
+                    name: "velocity",
                     type: "double"
                 }, {
-                    name: "True_track",
+                    name: "trueTrack",
                     type: "double"
                 }
             ];
@@ -172,7 +173,7 @@
                 symbol: marker,
                 visualVariables: {
                     type: "rotation",
-                    field: "True_track",
+                    field: "trueTrack",
                     rotationType: "geographic"
                 }
             };
@@ -181,21 +182,29 @@
                 content: [{
                     type: "fields",
                     fieldInfos: [{
-                        fieldName: "Icao24"
+                        fieldName: "icao24",
+                        label: "Icao24"
                     }, {
-                        fieldName: "Callsign"
+                        fieldName: "callsign",
+                        label: "Callsign"
                     }, {
-                        fieldName: "Origin_country"
+                        fieldName: "originCountry",
+                        label: "Origin Country"
                     }, {
-                        fieldName: "Longitude"
+                        fieldName: "longitude",
+                        label: "Longitude"
                     }, {
-                        fieldName: "Latitude"
+                        fieldName: "latitude",
+                        label: "Latitude"
                     }, {
-                        fieldName: "Baro_altitude"
+                        fieldName: "baroAltitude",
+                        label: "Baro altitude"
                     }, {
-                        fieldName: "Velocity"
+                        fieldName: "velocity",
+                        label: "Velocity"
                     }, {
-                        fieldName: "True_track"
+                        fieldName: "trueTrack",
+                        label: "True track"
                     }]
                 }],
             });
@@ -208,14 +217,14 @@
                     latitude: aircraft.latitude
                 };
                 let attributes = {
-                    Icao24: aircraft.icao24,
-                    Callsign: aircraft.callsign,
-                    Origin_country: aircraft.originCountry,
-                    Longitude: aircraft.longitude,
-                    Latitude: aircraft.latitude,
-                    True_track: aircraft.trueTrack,
-                    Baro_altitude: aircraft.baroAltitude,
-                    Velocity: aircraft.velocity
+                    icao24: aircraft.icao24,
+                    callsign: aircraft.callsign,
+                    originCountry: aircraft.originCountry,
+                    longitude: aircraft.longitude,
+                    latitude: aircraft.latitude,
+                    trueTrack: aircraft.trueTrack,
+                    baroAltitude: aircraft.baroAltitude,
+                    velocity: aircraft.velocity
                 };
                 return new Graphic({
                     geometry: point,
@@ -231,7 +240,7 @@
                 originCountry: "XXXXX",
                 longitude: 50,
                 latitude: 50,
-                trueTrack: 0,
+                trueTrack: 56,
                 baroAltitude: 0,
                 velocity: 0
             };
@@ -242,7 +251,7 @@
                 supportsEditing: true,
                 supportsAdd: true,
                 fields: fields,
-                objectIdField: "Icao24",
+                objectIdField: "icao24",
                 renderer: rotationRenderer,
                 geometryType: "point",
                 spatialReference: {
@@ -265,81 +274,79 @@
             });
 
             async function applyEditsToLayer(edits) {
-                featureLayer
-                    .applyEdits(edits)
-                    .then(function (results) {
-                        if (results.deleteFeatureResults.length > 0) {
-                            console.log(
-                                results.deleteFeatureResults.length,
-                                "objects have been removed"
-                            );
-                        }
-                        if (results.addFeatureResults.length > 0) {
-                            let add_finished = Date.now();
-                            let objectIds = [];
-                            results.addFeatureResults.forEach(function (item) {
-                                objectIds.push(item.objectId);
-                            });
-                            featureLayer
-                                .queryFeatures({
-                                    objectIds: objectIds
-                                })
-                                .then(function (results) {
-                                    console.log(
-                                        results.features.length +
-                                        " objects have been added"
-                                    );
-                                });
-                            let time_delta = add_finished - addStarts;
-                            console.log("time interval needed to add features: " + time_delta + " ms");
-                        }
-                    })
-            }
-            let removeFeatures = async (graphics, callback) => {
-                let deleteEdits;
-                if (graphics.length !== 0) {
-                    deleteEdits = {
-                        deleteFeatures: graphics
-                    };
-                } else {
-                    featureLayer.queryFeatures().then(function (results) {
-                        deleteEdits = {
-                            deleteFeatures: results.features
-                        };
-                    })
+                let results = await featureLayer.applyEdits(edits);
+                if (results.deleteFeatureResults.length > 0) {
+                    // console.log(
+                    //     results.deleteFeatureResults.length,
+                    //     "object(s) have been removed"
+                    // );
                 }
-                applyEditsToLayer(deleteEdits).then(() => {
-                    addStarts = Date.now();
-                    if (callback) {
-                        callback ();
-                    }
-                })
+                if (results.addFeatureResults.length > 0) {
+                    // let add_finished = Date.now();
+                    let objectIds = [];
+                    results.addFeatureResults.forEach(function (item) {
+                        objectIds.push(item.objectId);
+                    });
+                    let res = await featureLayer.queryFeatures({
+                        objectIds: objectIds
+                    });
+                    // console.log(res.features.length + " object(s) have been added");
+                    // let time_delta = add_finished - addStarts;
+                    // console.log("time interval needed to add features: " + time_delta + " ms");
+                }
             }
-            function addFeatures(graphics) {
-                addObjects = {
+
+            async function removeFeatures(graphics) {
+                async function constructDeletes(graphics) {
+                    let deleteEdits = {
+                        deleteFeatures: []
+                    };
+                    if (graphics.length !== 0) {
+                        deleteEdits.deleteFeatures = graphics;
+                        return deleteEdits;
+                    } else {
+                        let results = await featureLayer.queryFeatures();
+                        deleteEdits.deleteFeatures = results.features;
+                        return deleteEdits;
+                    }
+                }
+                let edits = await constructDeletes(graphics);
+                // console.log("removeFeatures: edits = " + edits);
+                // console.log(edits);
+                await applyEditsToLayer(edits);
+                // console.log("delete finished");
+                addStarts = Date.now();
+            }
+
+            async function addFeatures(graphics) {
+                let addObjects = {
                     addFeatures: []
                 };
                 if (graphics) {
                     graphics.forEach(function (item) {
-                        addObjects.addFeatures.push(item)
+                        addObjects.addFeatures.push(item);
                     })
                 }
-                applyEditsToLayer(addEdits);
+                await applyEditsToLayer(addObjects);
             }
 
             map.add(featureLayer);
-            removeFeatures();
+            removeFeatures([]);
 
-            view.watch("extent", function () {
-                extentCoords.xMin = parseFloat(view.extent.xmin.toFixed(2));
-                extentCoords.yMin = parseFloat(view.extent.ymin.toFixed(2));
-                extentCoords.xMax = parseFloat(view.extent.xmax.toFixed(2));
-                extentCoords.yMax = parseFloat(view.extent.ymax.toFixed(2));
+            watchUtils.whenTrue(view, "stationary", function() {
+                if (view.extent) {
+                    extentCoords.xMin = parseFloat(view.extent.xmin.toFixed(2));
+                    extentCoords.yMin = parseFloat(view.extent.ymin.toFixed(2));
+                    extentCoords.xMax = parseFloat(view.extent.xmax.toFixed(2));
+                    extentCoords.yMax = parseFloat(view.extent.ymax.toFixed(2));
+                    if (Object.keys(buckets).length !== 0) {
+                        // let extentStarts = Date.now();
+                        // console.log("extent starts render at " + extentStarts);
+                        render(buckets, extentCoords, true)
+                    }
+                }
+            })
 
-                console.log("xmin = " + xMin + ", xmax = " + xMax);
-                console.log("ymin = " + yMin + ", ymax = " + yMax);
-                render(vectorBuckets, extentCoords, true)
-            });
             view.whenLayerView(featureLayer).then(function (layerView) {
                 let highlight;
                 view.on("pointer-move", function (event) {
@@ -357,29 +364,28 @@
                 });
             });
 
-            function calculateHash (str) {
-                let quantity = Object.keys(vectorBuckets).length;
+            function calculateHash (str, bucketsQuantity) {
                 let h = 0, i = 0, len = str.length;
                 if (len === 0) {
                     return h;
                 }
                 while (i < len) {
                     let char = str.charCodeAt(i);
-                    h = (((h << 5) - h) + char) % quantity;
+                    h = (((h << 5) - h) + char) % bucketsQuantity;
                     i ++;
                 }
-                return (h % quantity);
+                return (h % bucketsQuantity);
             }
 
             function bucketize (aircrafts) {
-                let buckets = {};
+                let buckets = [];
                 for (let i = 0; i < 128; i ++) {
                     buckets[i] = [];
                 }
                 aircrafts.forEach(aircraft => {
-                    let hash = calculateHash(aircraft['icao24']);
+                    let hash = calculateHash(aircraft['icao24'], Object.keys(buckets).length);
                     buckets[hash].push(aircraft);
-                })
+                });
                 return buckets
             }
 
@@ -388,33 +394,35 @@
                 let icaoToRender = new Set ();
                 const maxPointQuantity = 200;
                 let count = 0;
-                for (let bucket in buckets) {
-                    if (count > maxPointQuantity) {
-                        console.log("Final quantity of points for rendering: " + count);
-                        break;
-                    }
-                    bucket.forEach(aircraft => {
-                        let long = aircraft['longitude'];
-                        let lat = aircraft['latitude'];
-                        let coords = webMercatorUtils.lngLatToXY(long, lat);
-                        long = parseFloat(coords[0].toFixed(2));
-                        lat = parseFloat(coords[1].toFixed(2));
-
-                        if (
-                            (lat > extent.yMin) && (lat < extent.yMax) &&
-                            (long > extent.xMin) && (long < extent.xMax)
-                        ) {
-                            let id = aircraft['icao24'];
-                            graphics[id] = aircraftToGraphics(aircraft);
-                            count++;
-                            icaoToRender.add(id);
+                if (buckets.length !== 0) {
+                    buckets.forEach(bucket => {
+                        if (count > maxPointQuantity) {
+                            // console.log("Quantity of points for rendering: " + count);
+                            return [icaoToRender, graphics];
                         }
+                        bucket.forEach(aircraft => {
+                            let long = aircraft['longitude'];
+                            let lat = aircraft['latitude'];
+                            let coords = webMercatorUtils.lngLatToXY(long, lat);
+                            long = parseFloat(coords[0].toFixed(2));
+                            lat = parseFloat(coords[1].toFixed(2));
+
+                            if (
+                                (lat > extent.yMin) && (lat < extent.yMax) &&
+                                (long > extent.xMin) && (long < extent.xMax)
+                            ) {
+                                let id = aircraft['icao24'];
+                                graphics[id] = aircraftToGraphics(aircraft);
+                                count++;
+                                icaoToRender.add(id);
+                            }
+                        })
                     })
                 }
                 return [icaoToRender, graphics];
             }
 
-            function render (buckets, currentExtent, partial = false) {
+            async function render (buckets, currentExtent, partial = false) {
                 let result = selectPoints(buckets, currentExtent);
                 let icaos = result[0];
                 let graphics = result[1];
@@ -423,42 +431,46 @@
                 let addObjects = [];
                 if (partial === true) {
                     icaos.forEach(icao => {
-                        if (!(icao in Object.keys(graphicObjects))) {
+                        if (!(Object.keys(graphicObjects).includes(icao))) {
                             addObjects.push(graphics[icao]);
                         }
                     });
+                    // console.log(addObjects.length + " points should be drawn");
                     Object.keys(graphicObjects).forEach(icao => {
                         if (!(icaos.has(icao))) {
                             deleteObjects.push(graphicObjects[icao])
                         }
                     });
+                    // console.log(deleteObjects.length + " points should be deleted");
+                } else {
+                    Object.keys(graphics).forEach(icao => {
+                        addObjects.push(graphics[icao]);
+                    })
                 }
-                removeFeatures(deleteObjects).then(() => {
-                    addFeatures(addObjects);
-                })
+                await removeFeatures(deleteObjects);
+                await addFeatures(addObjects);
+
                 graphicObjects = graphics;
             }
 
             function updateAircrafts (aircrafts) {
-                vectorBuckets = bucketize(aircrafts);
-                render(vectorBuckets, extentCoords);
+                buckets = bucketize(aircrafts);
+                render(buckets, extentCoords);
             }
+
+            $(document).ready(function(){
+                const socket = io({transports: ['websocket']});
+
+                socket.on('connect', () => {
+                    console.log('client: connected');
+                });
+
+                socket.on('message', data => {
+                    updateAircrafts(data);
+                });
+            });
         })
     </script>
-    <script>
-        $(document).ready(function(){
-            const socket = io({transports: ['websocket']});
-
-            socket.on('connect', () => {
-                console.log('client: connected');
-            });
-
-            socket.on('message', data => {
-                updateAircrafts(data);
-            });
-        });
-    </script>
-
 </head>
 
 <body>
@@ -468,10 +480,10 @@
     </div>
     <h1>MyFly</h1>
     <div class="item">
-        <a id="about" href="{{  url_for('.about') }}">About MyFly</a>
+        <a class="about" href="{{  url_for('.about') }}">About MyFly</a>
     </div>
     <div class="item">
-        <a id="about" href="{{ url_for('.contacts') }}">Contacts</a>
+        <a class="about" href="{{ url_for('.contacts') }}">Contacts</a>
     </div>
 </div>
 <div>
@@ -482,7 +494,7 @@
 </div>
 <div class="footer">
     Icons made by <a id="about" href="http://www.freepik.com/" title="Freepik">Freepik</a>
-    from <a id="about" href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
+    from <a class="about" href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
 </div>
 
 </body>
