@@ -1,12 +1,9 @@
 import eventlet
-
 eventlet.monkey_patch()
 
+from contextlib import closing
 import threading
 import time
-from contextlib import closing
-import yaml
-import os
 from typing import List, Tuple, Dict
 
 from flask import Flask, render_template
@@ -14,6 +11,7 @@ from flask_socketio import SocketIO
 
 from flighttracker import utils
 from flighttracker.database import DB
+from config.parser import ConfigParser
 
 app = Flask(__name__)
 logger = utils.setup_logging()
@@ -37,13 +35,11 @@ def contacts():
 
 @socketio.on("connect")
 def connect() -> None:
-    print("connected")
     logger.info("A client has been connected to the server")
 
 
 @socketio.on("disconnect")
 def disconnect() -> None:
-    print("disconnected")
     logger.info("A client has been disconnected from the server")
 
 
@@ -75,7 +71,6 @@ def make_object(vectors: List[Tuple] or None) -> List[Dict] or None:
                          'onGround': vectors[i][9], 'velocity': vectors[i][10], 'trueTrack': vectors[i][11],
                          'verticalRate': vectors[i][12], 'sensors': vectors[i][13], 'geoAltitude': vectors[i][14],
                          'squawk': vectors[i][15], 'spi': vectors[i][16], 'positionSource': vectors[i][17]}
-
         objects.append(vector_object)
     return objects
 
@@ -94,20 +89,10 @@ def start_app() -> None:
 
 
 def start_webapp() -> None:
-    script_dir = os.path.abspath(__file__ + "/../../../")
-    rel_path = 'config/config.yaml'
-    path = os.path.join(script_dir, rel_path)
-
-    with open(path, 'r') as cnf:
-        parsed_yaml_file = yaml.load(cnf, Loader=yaml.FullLoader)
-        dbname = parsed_yaml_file['postgres']['pg_dbname']
-        user_name = parsed_yaml_file['postgres']['pg_username']
-        password = parsed_yaml_file['postgres']['pg_password']
-        hostname = parsed_yaml_file['postgres']['pg_hostname']
-        port_number = parsed_yaml_file['postgres']['pg_port_number']
-
+    conf = ConfigParser
     fetching_thread = threading.Thread(target=fetch_vectors, daemon=True,
-                                       args=(dbname, user_name, password, hostname, port_number))
+                                       args=(conf.dbname, conf.user_name, conf.password,
+                                             conf.hostname, conf.port_number))
     fetching_thread.start()
     broadcasting_greenthread = eventlet.spawn(broadcast_vectors)
     app_launch_greenthread = eventlet.spawn(start_app)

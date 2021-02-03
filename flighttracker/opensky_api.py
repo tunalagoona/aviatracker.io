@@ -2,8 +2,9 @@ import json
 import logging
 import socket
 from typing import List, Dict
-import yaml
 import os
+
+import yaml
 
 from requests import get, exceptions
 
@@ -56,7 +57,6 @@ class OpenskyStates(object):
         self.url_operation = "/states/all"
 
     def get_states(self, time_sec: int = 0, icao24: str = None) -> State_vectors:
-        module_logger.info("get_states has started")
         parameters = {"time": int(time_sec), "icao24": icao24}
         try:
             r = get(

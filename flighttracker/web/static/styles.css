@@ -1,0 +1,101 @@
+html, body {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    /*background-color: #1E2224;*/
+    color: white;
+    font-family: 'Cambay', Helvetica;
+    font-size: 22px;
+    background-image: linear-gradient(170deg, rgba(18, 20, 21, 1) 20%, rgba(18, 20, 21, 0.38));
+}
+.container {
+    margin-top: 10px;
+    width: 900px;
+    padding: 10px;
+    font-size: 22px;
+}
+.bird {
+    width: 50px;
+    padding: 10px;
+    display: inline-block;
+    vertical-align: sub;
+    text-align: center;
+}
+h1 {
+    margin: 2px;
+    display: inline-block;
+    vertical-align: middle
+}
+.elements {
+    color: inherit;
+    text-decoration: none;
+}
+.item {
+    width: 150px;
+    display: inline-block;
+    vertical-align: sub;
+    text-align: center;
+    font-size: 22px;
+}
+.shadow {
+    box-shadow: 0 10px 10px 0 inset rgba(0, 0, 0, 0.4);
+    position: relative;
+    margin-left: 330px;
+    height: 20px;
+    content: "";
+    z-index: 3;
+}
+#viewDiv {
+    position: absolute;
+    padding: 0;
+    margin-left: 330px;
+    height: 96%;
+    width: 77%;
+    z-index: 1;
+}
+#feature-node {
+    position: absolute;
+    float: left;
+    width: 330px;
+    height: 100%;
+    padding: 0;
+    z-index: 2;
+    color: white;
+    background: rgba(24, 28, 30, 1);
+}
+.esri-feature__size-container {
+    padding: 10px;
+}
+.esri-feature__title {
+    margin-left: 10px;
+}
+.esri-feature-fields__field-header {
+    color: white;
+}
+.esri-feature-fields__field-data {
+    color: white;
+}
+.footer {
+    text-align: center;
+    font-size: 8px;
+    color: grey;
+    position: absolute;
+    bottom: 5px;
+}
+.subtitle {
+    font-size: 18px;
+    margin-left: 2%;
+}
+.plain-text {
+    margin-left: 2%;
+    margin-right: 2%;
+    font-size: 14px;
+}
+.myfly {
+    width: 40%;
+    float: right;
+    margin-left: 30px;
+    margin-right: 30px;
+    margin-bottom: 30px;
+}

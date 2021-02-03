@@ -2,97 +2,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
-    <link href='https://fonts.googleapis.com/css?family=Cambay' rel='stylesheet'>
     <title>MyFly</title>
-    <style>
-        html, body {
-            padding: 0;
-            margin: 0;
-            height: 100%;
-            width: 100%;
-            background-color: #1E2224;
-            color: white;
-            font-family: 'Cambay', Helvetica;
-            font-size: 22px;
-        }
-        .container {
-            margin-top: 10px;
-            width: 900px;
-            padding: 10px;
-        }
-        .bird {
-            width: 50px;
-            padding: 10px;
-            display: inline-block;
-            vertical-align: sub;
-            text-align: center;
-        }
-        h1 {
-            margin: 2px;
-            display: inline-block;
-            vertical-align: middle
-        }
-        .about {
-            color: inherit;
-            text-decoration: none;
-        }
-        .item {
-            width: 150px;
-            display: inline-block;
-            vertical-align: sub;
-            text-align: center;
-            font-size: 22px;
-        }
-        .shadow {
-            box-shadow: 0 10px 10px 0 inset rgba(0, 0, 0, 0.4);
-            position: relative;
-            margin-left: 330px;
-            height: 20px;
-            content: "";
-            z-index: 3;
-        }
-        #viewDiv {
-            position: absolute;
-            padding: 0;
-            margin-left: 330px;
-            height: 96%;
-            width: 77%;
-            z-index: 1;
-        }
-        #feature-node {
-            position: absolute;
-            float: left;
-            width: 330px;
-            height: 100%;
-            padding: 0;
-            z-index: 2;
-            color: white;
-            background: rgba(18, 20, 21, 0.5)
-        }
-        /*.esri-feature__size-container {*/
-        /*    padding: 20px;*/
-        /*}*/
-        .esri-widget {
-            color: white;
-        }
-        .footer {
-            text-align: center;
-            font-size: 8px;
-            color: grey;
-            position: absolute;
-            bottom: 5px;
-        }
-    </style>
+    <link href='https://fonts.googleapis.com/css?family=Cambay' rel='stylesheet'>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://js.arcgis.com/4.16/esri/themes/light/main.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="https://kit.fontawesome.com/2ddda9be5b.js" crossorigin="anonymous"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
             integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I="
             crossorigin="anonymous"></script>
-
-    <link rel="stylesheet" href="https://js.arcgis.com/4.16/esri/themes/light/main.css">
     <script src="https://js.arcgis.com/4.16/"></script>
-
-
     <script type="text/javascript">
         require([
             "esri/Map",
@@ -189,22 +108,22 @@
                         label: "Callsign"
                     }, {
                         fieldName: "originCountry",
-                        label: "Origin Country"
+                        label: "Origin country"
                     }, {
                         fieldName: "longitude",
-                        label: "Longitude"
+                        label: "Longitude, DD"
                     }, {
                         fieldName: "latitude",
-                        label: "Latitude"
+                        label: "Latitude, DD"
                     }, {
                         fieldName: "baroAltitude",
-                        label: "Baro altitude"
+                        label: "Baro altitude, m"
                     }, {
                         fieldName: "velocity",
-                        label: "Velocity"
+                        label: "Velocity, m/s"
                     }, {
                         fieldName: "trueTrack",
-                        label: "True track"
+                        label: "True track, DD"
                     }]
                 }],
             });
@@ -263,7 +182,7 @@
 
             const graphic = {
                 popupTemplate: {
-                    content: "Mouse over features to show details..."
+                    title: "Mouse over aircrafts to show details..."
                 }
             };
             const feature = new Feature({
@@ -276,13 +195,13 @@
             async function applyEditsToLayer(edits) {
                 let results = await featureLayer.applyEdits(edits);
                 if (results.deleteFeatureResults.length > 0) {
-                    // console.log(
-                    //     results.deleteFeatureResults.length,
-                    //     "object(s) have been removed"
-                    // );
+                    console.log(
+                        results.deleteFeatureResults.length,
+                        "object(s) have been removed"
+                    );
                 }
                 if (results.addFeatureResults.length > 0) {
-                    // let add_finished = Date.now();
+                    let add_finished = Date.now();
                     let objectIds = [];
                     results.addFeatureResults.forEach(function (item) {
                         objectIds.push(item.objectId);
@@ -290,9 +209,9 @@
                     let res = await featureLayer.queryFeatures({
                         objectIds: objectIds
                     });
-                    // console.log(res.features.length + " object(s) have been added");
-                    // let time_delta = add_finished - addStarts;
-                    // console.log("time interval needed to add features: " + time_delta + " ms");
+                    console.log(res.features.length + " object(s) have been added");
+                    let time_delta = add_finished - addStarts;
+                    console.log("Time spent: " + time_delta + " ms");
                 }
             }
 
@@ -340,8 +259,6 @@
                     extentCoords.xMax = parseFloat(view.extent.xmax.toFixed(2));
                     extentCoords.yMax = parseFloat(view.extent.ymax.toFixed(2));
                     if (Object.keys(buckets).length !== 0) {
-                        // let extentStarts = Date.now();
-                        // console.log("extent starts render at " + extentStarts);
                         render(buckets, extentCoords, true)
                     }
                 }
@@ -377,12 +294,12 @@
                 return (h % bucketsQuantity);
             }
 
-            function bucketize (aircrafts) {
+            function bucketize (aircraft) {
                 let buckets = [];
                 for (let i = 0; i < 128; i ++) {
                     buckets[i] = [];
                 }
-                aircrafts.forEach(aircraft => {
+                aircraft.forEach(aircraft => {
                     let hash = calculateHash(aircraft['icao24'], Object.keys(buckets).length);
                     buckets[hash].push(aircraft);
                 });
@@ -397,7 +314,6 @@
                 if (buckets.length !== 0) {
                     buckets.forEach(bucket => {
                         if (count > maxPointQuantity) {
-                            // console.log("Quantity of points for rendering: " + count);
                             return [icaoToRender, graphics];
                         }
                         bucket.forEach(aircraft => {
@@ -435,13 +351,11 @@
                             addObjects.push(graphics[icao]);
                         }
                     });
-                    // console.log(addObjects.length + " points should be drawn");
                     Object.keys(graphicObjects).forEach(icao => {
                         if (!(icaos.has(icao))) {
                             deleteObjects.push(graphicObjects[icao])
                         }
                     });
-                    // console.log(deleteObjects.length + " points should be deleted");
                 } else {
                     Object.keys(graphics).forEach(icao => {
                         addObjects.push(graphics[icao]);
@@ -453,8 +367,8 @@
                 graphicObjects = graphics;
             }
 
-            function updateAircrafts (aircrafts) {
-                buckets = bucketize(aircrafts);
+            function updateAircrafts (aircraft) {
+                buckets = bucketize(aircraft);
                 render(buckets, extentCoords);
             }
 
@@ -478,12 +392,11 @@
     <div class="bird">
         <i class="fas fa-kiwi-bird fa-2x"></i>
     </div>
-    <h1>MyFly</h1>
+    <h1>
+        <a class="elements" href="{{  url_for('.index') }}">MyFly</a>
+    </h1>
     <div class="item">
-        <a class="about" href="{{  url_for('.about') }}">About MyFly</a>
-    </div>
-    <div class="item">
-        <a class="about" href="{{ url_for('.contacts') }}">Contacts</a>
+        <a class="elements" href="{{  url_for('.about') }}">About</a>
     </div>
 </div>
 <div>
@@ -493,8 +406,8 @@
 
 </div>
 <div class="footer">
-    Icons made by <a id="about" href="http://www.freepik.com/" title="Freepik">Freepik</a>
-    from <a class="about" href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
+    Icons made by <a class="elements" href="http://www.freepik.com/" title="Freepik">Freepik</a>
+    from <a class="elements" href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
 </div>
 
 </body>

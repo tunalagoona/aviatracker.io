@@ -27,25 +27,25 @@ class DB:
         new_table = (
             """
                 CREATE TABLE opensky_state_vectors (
-                        request_time INTEGER,
-                        icao24 VARCHAR,
-                        callsign VARCHAR,
-                        origin_country VARCHAR,
-                        time_position INTEGER,
-                        last_contact INTEGER,
-                        longitude DOUBLE PRECISION,
-                        latitude DOUBLE PRECISION,
-                        baro_altitude DOUBLE PRECISION,
-                        on_ground BOOLEAN,
-                        velocity DOUBLE PRECISION,
-                        true_track DOUBLE PRECISION,
-                        vertical_rate DOUBLE PRECISION,
-                        sensors INTEGER,
-                        geo_altitude DOUBLE PRECISION,
-                        squawk TEXT,
-                        spi BOOLEAN,
-                        position_source INTEGER,
-                        PRIMARY KEY (request_time, icao24)
+                    request_time INTEGER,
+                    icao24 VARCHAR,
+                    callsign VARCHAR,
+                    origin_country VARCHAR,
+                    time_position INTEGER,
+                    last_contact INTEGER,
+                    longitude DOUBLE PRECISION,
+                    latitude DOUBLE PRECISION,
+                    baro_altitude DOUBLE PRECISION,
+                    on_ground BOOLEAN,
+                    velocity DOUBLE PRECISION,
+                    true_track DOUBLE PRECISION,
+                    vertical_rate DOUBLE PRECISION,
+                    sensors INTEGER,
+                    geo_altitude DOUBLE PRECISION,
+                    squawk TEXT,
+                    spi BOOLEAN,
+                    position_source INTEGER,
+                    PRIMARY KEY (request_time, icao24)
                 );
             """
         )
@@ -55,8 +55,6 @@ class DB:
 
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
         with self.conn:
-            """When a connection exits the with block, if no exception has been raised by the block,
-            the transaction is committed"""
             with self.conn.cursor() as curs:
                 curs.execute("SELECT EXISTS (SELECT * FROM information_schema.tables WHERE table_name=%s)",
                              ('opensky_state_vectors',))
@@ -99,7 +97,7 @@ class DB:
                             velocity, true_track, vertical_rate, geo_altitude) = (%(time_position)s, %(last_contact)s, 
                             %(longitude)s, %(latitude)s, %(baro_altitude)s, %(on_ground)s, %(velocity)s, 
                             %(true_track)s, %(vertical_rate)s, %(geo_altitude)s);
-                            """,
+                        """,
                         state_vector,
                     )
 

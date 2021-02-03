@@ -5,13 +5,38 @@ formatters:
         format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 handlers:
-    file_handler:
+    file_handler_app:
         class: logging.FileHandler
         level: INFO
         formatter: standard
-        filename: /flight-tracker/logs/log.log
+        filename: /flight-tracker/logs/app.log
         mode: w+
+
+    file_handler_main:
+        class: logging.FileHandler
+        level: INFO
+        formatter: standard
+        filename: /flight-tracker/logs/main.log
+        mode: w+
+
+    file_handler_celery:
+        class: logging.FileHandler
+        level: INFO
+        formatter: standard
+        filename: /flight-tracker/logs/celery.log
+        mode: w+
+
+loggers:
+    app_logger:
+        level: INFO
+        handlers: [file_handler_app]
+    main_logger:
+        level: INFO
+        handlers: [file_handler_main]
+    celery_logger:
+        level: INFO
+        handlers: [file_handler_celery]
 
 root:
     level: INFO
-    handlers: [file_handler]
+    handlers: [file_handler_main]
