@@ -3,6 +3,7 @@ import logging
 
 from psycopg2 import connect
 
+
 State_vector = Dict
 State_vectors = List[State_vector]
 
@@ -11,6 +12,7 @@ logger = logging.getLogger()
 
 class DB:
     def __init__(self, dbname, user, password, host, port):
+        logger.info('')
         logger.info("Connecting to the PostgreSQL database...")
         self.conn = connect(dbname=dbname, user=user, password=password, host=host, port=port)
         check = (

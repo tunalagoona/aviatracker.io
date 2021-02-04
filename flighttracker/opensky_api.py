@@ -8,10 +8,11 @@ import yaml
 
 from requests import get, exceptions
 
+
 State_vector = Dict
 State_vectors = List[State_vector]
 
-module_logger = logging.getLogger()
+logger = logging.getLogger()
 
 
 class StateVector(object):
@@ -67,7 +68,7 @@ class OpenskyStates(object):
             )
             st_code = r.status_code
             if st_code == 200:
-                module_logger.info(
+                logger.info(
                     "Status_code is 200. Successful connection to Opensky API."
                 )
                 response = json.loads(r.text)
@@ -79,10 +80,10 @@ class OpenskyStates(object):
                 ]
                 return states
             else:
-                module_logger.error(
+                logger.error(
                     f"Could not connect to Opensky API. Status code is {st_code}"
                 )
                 return self.get_states(time_sec)
         except (OSError, exceptions.ReadTimeout, socket.timeout) as e:
-            module_logger.error(f"Could not get state vectors from API: {e}")
+            logger.error(f"Could not get state vectors from API: {e}")
             return self.get_states(time_sec)

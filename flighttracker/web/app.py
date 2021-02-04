@@ -13,6 +13,7 @@ from flighttracker import utils
 from flighttracker.database import DB
 from config.parser import ConfigParser
 
+
 app = Flask(__name__)
 logger = utils.setup_logging()
 socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True)
@@ -26,11 +27,6 @@ def index():
 @app.route('/about', methods=['GET'])
 def about():
     return render_template("about.html")
-
-
-@app.route('/contacts', methods=['GET'])
-def contacts():
-    return render_template("contacts.html")
 
 
 @socketio.on("connect")
