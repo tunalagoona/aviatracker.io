@@ -16,7 +16,8 @@ from config.parser import ConfigParser
 
 app = Flask(__name__)
 logger = utils.setup_logging()
-socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True, cors_allowed_origins="https://aviatracker.io/")
+conf = ConfigParser(host='aws')
+socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True, cors_allowed_origins=conf.origin)
 
 
 @app.route("/")
@@ -85,7 +86,6 @@ def start_app() -> None:
 
 
 def start_webapp() -> None:
-    conf = ConfigParser
     fetching_thread = threading.Thread(target=fetch_vectors, daemon=True,
                                        args=(conf.dbname, conf.user_name, conf.password,
                                              conf.hostname, conf.port_number))

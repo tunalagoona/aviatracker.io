@@ -31,7 +31,7 @@ def setup_task_logger(logger):
 def insert_state_vectors_to_db(cur_time: int) -> None:
     api = OpenskyStates()
     try:
-        conf = ConfigParser
+        conf = ConfigParser(host='aws')
         with closing(
             DB(dbname=conf.dbname, user=conf.user_name, password=conf.password, host=conf.hostname, port=conf.port_number)
         ) as db:
