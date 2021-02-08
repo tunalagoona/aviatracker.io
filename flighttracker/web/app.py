@@ -16,7 +16,7 @@ from config.parser import ConfigParser
 
 app = Flask(__name__)
 logger = utils.setup_logging()
-socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True)
+socketio = SocketIO(app, async_mode='eventlet', logger=True, engineio_logger=True, cors_allowed_origins="https://aviatracker.io/")
 
 
 @app.route("/")
