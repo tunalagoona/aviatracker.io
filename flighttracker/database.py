@@ -25,12 +25,12 @@ class DB:
                 curs.execute(check)
         logger.info("Successful connection to the PostgreSQL database")
 
-    def create_table(self):
+    def create_table_current_states(self):
         new_table = (
             """
-                CREATE TABLE opensky_state_vectors (
+                CREATE TABLE current_states (
                     request_time INTEGER,
-                    icao24 VARCHAR,
+                    icao24 VARCHAR PRIMARY KEY,
                     callsign VARCHAR,
                     origin_country VARCHAR,
                     time_position INTEGER,
@@ -46,8 +46,44 @@ class DB:
                     geo_altitude DOUBLE PRECISION,
                     squawk TEXT,
                     spi BOOLEAN,
-                    position_source INTEGER,
-                    PRIMARY KEY (request_time, icao24)
+                    position_source INTEGER
+                );
+            """
+        )
+        with self.conn:
+            with self.conn.cursor() as curs:
+                curs.execute(new_table)
+
+    def create_table_flight_paths(self):
+        new_table = (
+            """
+                CREATE TABLE flight_paths (
+                    path_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    last_update INTEGER,
+                    icao24 VARCHAR,
+                    departure_airport_icao VARCHAR,
+                    arrival_airport_icao VARCHAR,
+                    departure_airport_long DOUBLE PRECISION,
+                    departure_airport_lat DOUBLE PRECISION,
+                    path JSONB,
+                    finished BOOLEAN,
+                    UNIQUE (last_update, icao24)
+                );
+            """
+        )
+        with self.conn:
+            with self.conn.cursor() as curs:
+                curs.execute(new_table)
+
+    def create_table_airport_stats(self):
+        new_table = (
+            """
+                CREATE TABLE airport_stats (
+                    record_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    airport_icao VARCHAR,
+                    date DATE,
+                    airplane_quantity INTEGER,
+                    UNIQUE (airport_icao, date)
                 );
             """
         )
@@ -59,10 +95,10 @@ class DB:
         with self.conn:
             with self.conn.cursor() as curs:
                 curs.execute("SELECT EXISTS (SELECT * FROM information_schema.tables WHERE table_name=%s)",
-                             ('opensky_state_vectors',))
+                             ('current_states',))
                 table_exists = curs.fetchone()[0]
                 if table_exists is not True:
-                    self.create_table()
+                    self.create_table_current_states()
 
                 for vector in vectors:
                     state_vector = {
