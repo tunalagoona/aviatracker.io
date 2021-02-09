@@ -9,9 +9,14 @@ app = Celery(
 )
 
 app.conf.beat_schedule = {
-    "run-me-every-five-seconds": {
-        "task": "flighttracker.task_scheduling.vector_insertion.task",
-        "schedule": 5.0,
-        "args": (),
+    'every-five-sec-insert-states': {
+        'task': 'flighttracker.task_scheduling.vector_insertion.insert_states',
+        'schedule': 5.0,
+        'args': (),
+    },
+    'every-twenty-sec-update-paths': {
+        'task': 'flighttracker.task_scheduling.vector_insertion.update_paths',
+        'schedule': 20.0,
+        'args': (),
     }
 }
