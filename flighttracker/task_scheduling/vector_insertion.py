@@ -31,7 +31,7 @@ def setup_task_logger(logger):
 def insert_state_vectors_to_db(cur_time: int) -> None:
     api = OpenskyStates()
     try:
-        conf = ConfigParser
+        conf = ConfigParser()
         with closing(
             DB(dbname=conf.dbname, user=conf.user_name, password=conf.password, host=conf.hostname, port=conf.port_number)
         ) as db:
@@ -57,9 +57,23 @@ def insert_state_vectors_to_db(cur_time: int) -> None:
         insert_state_vectors_to_db(cur_time=cur_time)
 
 
+def update_flight_paths():
+    try:
+        conf = ConfigParser()
+        with closing(
+                DB(dbname=conf.dbname, user=conf.user_name, password=conf.password, host=conf.hostname, port=conf.port_number)
+        ) as db:
+            logger.info("Starting flight paths update")
+            db.update_paths()
+
+    except (Exception, DatabaseError) as e:
+        logger.exception(f"Exception in main(): {e}")
+        update_paths()
+
+
 @app.task
-def task():
-    task.time_limit = 15
+def insert_states(self):
+    self.time_limit = 15
     cur_time = int(time.time())
     insert_state_vectors_to_db(cur_time)
     old_outs = sys.stdout, sys.stderr
@@ -68,3 +82,9 @@ def task():
         app.log.redirect_stdouts_to_logger(logger, rlevel)
     finally:
         sys.stdout, sys.stderr = old_outs
+
+
+@app.task
+def update_paths(self):
+    self.time_limit = 10
+    update_flight_paths()
