@@ -55,13 +55,13 @@ class OpenskyStates(object):
 
         self.auth = (username, password)
         self.api_url = "https://opensky-network.org/api"
-        self.url_operation = "/states/all"
+        # self.url_operation = "/states/all"
 
     def get_states(self, time_sec: int = 0, icao24: str = None) -> State_vectors:
         parameters = {"time": int(time_sec), "icao24": icao24}
         try:
             r = get(
-                "{}{}".format(self.api_url, self.url_operation),
+                "{}{}".format(self.api_url, "/states/all"),
                 auth=self.auth,
                 params=parameters,  # type: ignore
                 timeout=15,
@@ -87,3 +87,31 @@ class OpenskyStates(object):
         except (OSError, exceptions.ReadTimeout, socket.timeout) as e:
             logger.error(f"Could not get state vectors from API: {e}")
             return self.get_states(time_sec)
+
+    def get_airports(self, begin, end) -> List:
+        parameters = {"begin": begin, "end": end}
+        try:
+            r = get(
+                "{}{}".format(self.api_url, "/flights/all"),
+                auth=self.auth,
+                params=parameters,  # type: ignore
+                timeout=15,
+            )
+            st_code = r.status_code
+            if st_code == 200:
+                logger.info(
+                    "Status_code is 200. Successful connection to Opensky API."
+                )
+                response = json.loads(r.text)
+                dept_airport = response["estDepartureAirport"]
+                arrv_airport = response["estArrivalAirport"]
+                est_arr_time = response["lastSeen"]
+                return [dept_airport, arrv_airport, est_arr_time]
+            else:
+                logger.error(
+                    f"Could not connect to Opensky API. Status code is {st_code}"
+                )
+                return self.get_airports(begin, end)
+        except (OSError, exceptions.ReadTimeout, socket.timeout) as e:
+            logger.error(f"Could not get airports from API: {e}")
+            return self.get_airports(begin, end)
