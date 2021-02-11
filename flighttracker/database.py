@@ -81,6 +81,22 @@ class DB:
             with self.conn.cursor() as curs:
                 curs.execute(new_table)
 
+    def create_table_airport_stats(self):
+        new_table = (
+            """
+                CREATE TABLE airport_stats (
+                    record_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    airport_icao VARCHAR,
+                    date DATE,
+                    airplane_quantity INTEGER,
+                    UNIQUE (airport_icao, date)
+                );
+            """
+        )
+        with self.conn:
+            with self.conn.cursor() as curs:
+                curs.execute(new_table)
+
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
         with self.conn:
             with self.conn.cursor() as curs:
