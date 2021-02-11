@@ -1,12 +1,13 @@
 import json
 from typing import List, Dict, Tuple
 import logging
-import socket
+import os
 
+import yaml
 from psycopg2 import connect
-from requests import exceptions
 
 from flighttracker.opensky_api import OpenskyStates
+import airports_insertion
 
 
 State_vector = Dict
@@ -30,56 +31,13 @@ class DB:
                 curs.execute(check)
         logger.info("Successful connection to the PostgreSQL database")
 
-    def create_table_current_states(self):
-        new_table = (
-            """
-                CREATE TABLE current_states (
-                    request_time INTEGER,
-                    icao24 VARCHAR PRIMARY KEY,
-                    callsign VARCHAR,
-                    origin_country VARCHAR,
-                    time_position INTEGER,
-                    last_contact INTEGER,
-                    longitude DOUBLE PRECISION,
-                    latitude DOUBLE PRECISION,
-                    baro_altitude DOUBLE PRECISION,
-                    on_ground BOOLEAN,
-                    velocity DOUBLE PRECISION,
-                    true_track DOUBLE PRECISION,
-                    vertical_rate DOUBLE PRECISION,
-                    sensors INTEGER,
-                    geo_altitude DOUBLE PRECISION,
-                    squawk TEXT,
-                    spi BOOLEAN,
-                    position_source INTEGER
-                );
-            """
-        )
+    def make_table(self, table_name):
+        path = 'make_table_scripts.yaml'
+        with open(path, 'r') as tm:
+            script = yaml.load(tm, Loader=yaml.FullLoader)[table_name]['create']
         with self.conn:
             with self.conn.cursor() as curs:
-                curs.execute(new_table)
-
-    def create_table_flight_paths(self):
-        new_table = (
-            """
-                CREATE TABLE flight_paths (
-                    path_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-                    last_update INTEGER,
-                    icao24 VARCHAR,
-                    departure_airport_icao VARCHAR,
-                    arrival_airport_icao VARCHAR,
-                    arrival_airport_long DOUBLE PRECISION,
-                    arrival_airport_lat DOUBLE PRECISION,
-                    estimated_arrival_time INTEGER,
-                    path JSONB,
-                    finished BOOLEAN,
-                    UNIQUE (last_update, icao24)
-                );
-            """
-        )
-        with self.conn:
-            with self.conn.cursor() as curs:
-                curs.execute(new_table)
+                curs.execute(script)
 
     def create_table_airport_stats(self):
         new_table = (
@@ -97,31 +55,6 @@ class DB:
             with self.conn.cursor() as curs:
                 curs.execute(new_table)
 
-    def create_table_airports(self):
-        new_table = (
-            """
-                CREATE TABLE airports (
-                    airport_id INTEGER PRIMARY KEY,
-                    name VARCHAR,
-                    city VARCHAR,
-                    country VARCHAR,
-                    iata VARCHAR,
-                    icao VARCHAR,
-                    latitude DOUBLE PRECISION,
-                    longitude DOUBLE PRECISION,
-                    altitude DOUBLE PRECISION,
-                    timezone VARCHAR,
-                    dst VARCHAR,
-                    tz_database_time_zone VARCHAR,
-                    type VARCHAR,
-                    source VARCHAR
-                );
-            """
-        )
-        with self.conn:
-            with self.conn.cursor() as curs:
-                curs.execute(new_table)
-
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
         with self.conn:
             with self.conn.cursor() as curs:
@@ -129,7 +62,7 @@ class DB:
                              ('current_states',))
                 table_exists = curs.fetchone()[0]
                 if table_exists is not True:
-                    self.create_table_current_states()
+                    self.make_table('current_states')
 
                 for vector in vectors:
                     state_vector = {
@@ -187,6 +120,14 @@ class DB:
             return vectors, state_vectors_quantity
 
     def insert_new_path(self, state, flight_info):
+        with self.conn.cursor() as curs:
+            curs.execute("SELECT EXISTS (SELECT * FROM information_schema.tables WHERE table_name=%s)",
+                         ('airports',))
+            table_exists = curs.fetchone()[0]
+            if table_exists is not True:
+                self.make_table('airports')
+                airports_insertion.fill_airports_table()
+
         last_update = state[0]
         icao24 = state[1]
         first_location = {
@@ -213,6 +154,12 @@ class DB:
 
     def update_paths(self):
         with self.conn.cursor() as curs:
+            curs.execute("SELECT EXISTS (SELECT * FROM information_schema.tables WHERE table_name=%s)",
+                         ('flight_paths',))
+            table_exists = curs.fetchone()[0]
+            if table_exists is not True:
+                self.make_table('flight_paths')
+
             curs.execute(
                 "SELECT * FROM current_states;"
             )

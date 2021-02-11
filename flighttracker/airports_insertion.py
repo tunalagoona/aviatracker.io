@@ -44,7 +44,6 @@ def fill_airports_table() -> None:
                         VALUES (%(airport_id)s, %(name)s, %(city)s, %(country)s, %(iata)s, %(icao)s, %(latitude)s, %(longitude)s, 
                         %(altitude)s, %(timezone)s, %(dst)s, %(tz_database_time_zone)s, %(item_type)s, %(source)s)
                     """, row)
-                print(f'line {row["airport_id"]} inserted')
 
 
 if __name__ == "__main__":

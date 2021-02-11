@@ -1,6 +1,5 @@
 import logging
 import logging.config
-import coloredlogs
 import os
 
 import yaml
@@ -14,7 +13,6 @@ def setup_logging(level=logging.INFO, name='root'):
         try:
             configurations = yaml.safe_load(f.read())
             logging.config.dictConfig(configurations)
-            coloredlogs.install()
         except Exception as e:
             print(e)
             print("Error in Logging Configuration. Using default configs")
