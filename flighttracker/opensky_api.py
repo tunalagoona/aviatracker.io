@@ -103,10 +103,14 @@ class OpenskyStates(object):
                     "Status_code is 200. Successful connection to Opensky API."
                 )
                 response = json.loads(r.text)
-                dept_airport = response["estDepartureAirport"]
-                arrv_airport = response["estArrivalAirport"]
-                est_arr_time = response["lastSeen"]
-                return [dept_airport, arrv_airport, est_arr_time]
+                formatted_response = []
+                for flight in response:
+                    icao24 = flight["icao24"]
+                    dept_airport = flight["estDepartureAirport"]
+                    arrv_airport = flight["estArrivalAirport"]
+                    est_arr_time = flight["lastSeen"]
+                    formatted_response.append([icao24, dept_airport, arrv_airport, est_arr_time])
+                return formatted_response
             else:
                 logger.error(
                     f"Could not connect to Opensky API. Status code is {st_code}"
