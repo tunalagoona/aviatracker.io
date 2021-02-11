@@ -59,6 +59,28 @@ class DB:
             with self.conn.cursor() as curs:
                 curs.execute(new_table)
 
+    def create_table_flight_paths(self):
+        new_table = (
+            """
+                CREATE TABLE flight_paths (
+                    path_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    last_update INTEGER,
+                    icao24 VARCHAR,
+                    departure_airport_icao VARCHAR,
+                    arrival_airport_icao VARCHAR,
+                    arrival_airport_long DOUBLE PRECISION,
+                    arrival_airport_lat DOUBLE PRECISION,
+                    estimated_arrival_time INTEGER,
+                    path JSONB,
+                    finished BOOLEAN,
+                    UNIQUE (last_update, icao24)
+                );
+            """
+        )
+        with self.conn:
+            with self.conn.cursor() as curs:
+                curs.execute(new_table)
+
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
         with self.conn:
             with self.conn.cursor() as curs:
