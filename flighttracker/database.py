@@ -1,7 +1,12 @@
+import json
 from typing import List, Dict, Tuple
 import logging
+import socket
 
 from psycopg2 import connect
+from requests import exceptions
+
+from flighttracker.opensky_api import OpenskyStates
 
 
 State_vector = Dict
@@ -54,43 +59,6 @@ class DB:
             with self.conn.cursor() as curs:
                 curs.execute(new_table)
 
-    def create_table_flight_paths(self):
-        new_table = (
-            """
-                CREATE TABLE flight_paths (
-                    path_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-                    last_update INTEGER,
-                    icao24 VARCHAR,
-                    departure_airport_icao VARCHAR,
-                    arrival_airport_icao VARCHAR,
-                    departure_airport_long DOUBLE PRECISION,
-                    departure_airport_lat DOUBLE PRECISION,
-                    path JSONB,
-                    finished BOOLEAN,
-                    UNIQUE (last_update, icao24)
-                );
-            """
-        )
-        with self.conn:
-            with self.conn.cursor() as curs:
-                curs.execute(new_table)
-
-    def create_table_airport_stats(self):
-        new_table = (
-            """
-                CREATE TABLE airport_stats (
-                    record_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-                    airport_icao VARCHAR,
-                    date DATE,
-                    airplane_quantity INTEGER,
-                    UNIQUE (airport_icao, date)
-                );
-            """
-        )
-        with self.conn:
-            with self.conn.cursor() as curs:
-                curs.execute(new_table)
-
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
         with self.conn:
             with self.conn.cursor() as curs:
@@ -123,7 +91,9 @@ class DB:
                     }
                     curs.execute(
                         """
-                            INSERT INTO opensky_state_vectors (request_time, icao24, callsign, origin_country, 
+                            DELETE FROM current_states;
+                            
+                            INSERT INTO current_states (request_time, icao24, callsign, origin_country, 
                             time_position, last_contact, longitude, latitude, baro_altitude, on_ground, velocity, 
                             true_track, vertical_rate, sensors, geo_altitude, squawk, spi, position_source)
                             VALUES (%(request_time)s, %(icao24)s, %(callsign)s, %(origin_country)s, %(time_position)s,
@@ -142,8 +112,8 @@ class DB:
     def get_last_inserted_state(self) -> Tuple[State_vectors, int]:
         with self.conn.cursor() as curs:
             curs.execute(
-                "SELECT * FROM opensky_state_vectors "
-                "WHERE request_time = (SELECT MAX(request_time) FROM opensky_state_vectors);"
+                "SELECT * FROM current_states "
+                "WHERE request_time = (SELECT MAX(request_time) FROM current_states);"
             )
             vectors = curs.fetchall()
 
