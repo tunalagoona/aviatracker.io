@@ -97,6 +97,31 @@ class DB:
             with self.conn.cursor() as curs:
                 curs.execute(new_table)
 
+    def create_table_airports(self):
+        new_table = (
+            """
+                CREATE TABLE airports (
+                    airport_id INTEGER PRIMARY KEY,
+                    name VARCHAR,
+                    city VARCHAR,
+                    country VARCHAR,
+                    iata VARCHAR,
+                    icao VARCHAR,
+                    latitude DOUBLE PRECISION,
+                    longitude DOUBLE PRECISION,
+                    altitude DOUBLE PRECISION,
+                    timezone VARCHAR,
+                    dst VARCHAR,
+                    tz_database_time_zone VARCHAR,
+                    type VARCHAR,
+                    source VARCHAR
+                );
+            """
+        )
+        with self.conn:
+            with self.conn.cursor() as curs:
+                curs.execute(new_table)
+
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
         with self.conn:
             with self.conn.cursor() as curs:
