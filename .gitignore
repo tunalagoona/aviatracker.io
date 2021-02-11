@@ -11,3 +11,4 @@ __pycache__/
 /logs/
 /config/config.yaml
 /config/__init__.py
+/airports.rtf
