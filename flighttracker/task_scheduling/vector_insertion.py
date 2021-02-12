@@ -65,10 +65,22 @@ def update_flight_paths():
         ) as db:
             logger.info("Starting flight paths update")
             db.update_paths()
-
     except (Exception, DatabaseError) as e:
         logger.exception(f"Exception in main(): {e}")
         update_paths()
+
+
+def update_airport_stats():
+    try:
+        conf = ConfigParser()
+        with closing(
+                DB(dbname=conf.dbname, user=conf.user_name, password=conf.password, host=conf.hostname, port=conf.port_number)
+        ) as db:
+            logger.info("Starting airports statistics update")
+            db.update_airport_stats()
+    except (Exception, DatabaseError) as e:
+        logger.exception(f"Exception in main(): {e}")
+        update_airport_stats()
 
 
 @app.task
@@ -88,3 +100,9 @@ def insert_states(self):
 def update_paths(self):
     self.time_limit = 10
     update_flight_paths()
+
+
+@app.task
+def update_stats(self):
+    self.time_limit = 10
+    update_airport_stats()
