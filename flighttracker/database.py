@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, date
 from typing import List, Dict, Tuple
 import logging
 import os
@@ -38,22 +39,6 @@ class DB:
         with self.conn:
             with self.conn.cursor() as curs:
                 curs.execute(script)
-
-    def create_table_airport_stats(self):
-        new_table = (
-            """
-                CREATE TABLE airport_stats (
-                    record_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-                    airport_icao VARCHAR,
-                    date DATE,
-                    airplane_quantity INTEGER,
-                    UNIQUE (airport_icao, date)
-                );
-            """
-        )
-        with self.conn:
-            with self.conn.cursor() as curs:
-                curs.execute(new_table)
 
     def upsert_state_vectors(self, vectors: State_vectors) -> None:
         with self.conn:
@@ -224,6 +209,84 @@ class DB:
                             WHERE icao24 = state[1] AND last_update = latest_update
                         """
                         curs.execute(update_sql, add_path)
+
+    def update_airport_stats(self):
+        with self.conn.cursor() as curs:
+            curs.execute("SELECT EXISTS (SELECT * FROM information_schema.tables WHERE table_name=%s)",
+                         ('airport_stats',))
+            table_exists = curs.fetchone()[0]
+            if table_exists is not True:
+                self.make_table('airport_stats')
+
+            today = date.today()
+            today_date = today.strftime("%b-%d-%Y")
+
+            time_now = datetime.now()
+
+            curs.execute(
+                "SELECT * FROM flight_paths"
+                "WHERE (time_now - last_update) < 3600 AND finished = True;"
+            )
+            paths = curs.fetchall()
+            counts = {}
+            for path in paths:
+                arr_airport = path[4]
+                dep_airport = path[3]
+
+                curs.execute(
+                    "SELECT * FROM airport_stats"
+                    "WHERE airport_icao = arr_airport AND date = today_date;"
+                )
+                stats = curs.fetchall()
+
+                if len(stats) == 0:
+                    info = {
+                        "airport_icao": arr_airport,
+                        "date_today": today_date,
+                        "airplane_quantity_arrivals": 1,
+                        "airplane_quantity_departures": 0
+                    }
+                    curs.execute(
+                        """
+                            INSERT INTO airport_stats (airport_icao, date, airplane_quantity_arrivals, airplane_quantity_departures)
+                            VALUES (%(airport_icao)s, %(date_today)s, %(airplane_quantity_arrivals)s, %(airplane_quantity_departures)s)
+                        """, info
+                    )
+                else:
+                    curs.execute(
+                        """
+                            UPDATE airport_stats
+                            SET airplane_quantity_arrivals = airplane_quantity_arrivals + 1
+                            WHERE airport_icao = (%s) AND date_today = (%s)
+                        """, (stats[0][1], stats[0][2])
+                    )
+
+                curs.execute(
+                    "SELECT * FROM airport_stats"
+                    "WHERE airport_icao = dep_airport AND date = today_date;"
+                )
+                stats = curs.fetchall()
+                if len(stats) == 0:
+                    info = {
+                        "airport_icao": dep_airport,
+                        "date_today": today_date,
+                        "airplane_quantity_arrivals": 0,
+                        "airplane_quantity_departures": 1
+                    }
+                    curs.execute(
+                        """
+                            INSERT INTO airport_stats (airport_icao, date, airplane_quantity_arrivals, airplane_quantity_departures)
+                            VALUES (%(airport_icao)s, %(date_today)s, %(airplane_quantity_arrivals)s, %(airplane_quantity_departures)s)
+                        """, info
+                    )
+                else:
+                    curs.execute(
+                        """
+                            UPDATE airport_stats
+                            SET airplane_quantity_departures = airplane_quantity_departures + 1
+                            WHERE airport_icao = (%s) AND date_today = (%s)
+                        """, (stats[0][1], stats[0][2])
+                    )
 
     def close(self):
         self.conn.close()

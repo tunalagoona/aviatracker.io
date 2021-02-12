@@ -48,7 +48,8 @@ airport_stats:
       record_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       airport_icao VARCHAR,
       date DATE,
-      airplane_quantity INTEGER,
+      airplane_quantity_arrivals INTEGER,
+      airplane_quantity_departures INTEGER,
       UNIQUE (airport_icao, date)
       );
     """
