@@ -9,7 +9,7 @@ from celery.utils.log import get_task_logger
 from celery.signals import after_setup_task_logger
 from celery.app.log import TaskFormatter
 
-from flighttracker.task_scheduling.celery import app
+from flighttracker.scheduled_tasks.celery import app
 from flighttracker.opensky_api import OpenskyStates
 from flighttracker.database import DB
 from config.parser import ConfigParser
@@ -23,7 +23,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 
 
 @after_setup_task_logger.connect
-def setup_task_logger(logger):
+def setup_task_logger(logger, **kwargs):
     for handler in logger.handlers:
         handler.setFormatter(TaskFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
@@ -83,7 +83,7 @@ def update_airport_stats():
         update_airport_stats()
 
 
-@app.task
+@app.task(bind=True)
 def insert_states(self):
     self.time_limit = 15
     cur_time = int(time.time())
@@ -96,13 +96,13 @@ def insert_states(self):
         sys.stdout, sys.stderr = old_outs
 
 
-@app.task
+@app.task(bind=True)
 def update_paths(self):
     self.time_limit = 10
     update_flight_paths()
 
 
-@app.task
+@app.task(bind=True)
 def update_stats(self):
     self.time_limit = 10
     update_airport_stats()
