@@ -1,6 +1,6 @@
 current_states:
   create:
-    """
+    '
       CREATE TABLE current_states (
       request_time INTEGER,
       icao24 VARCHAR PRIMARY KEY,
@@ -21,11 +21,11 @@ current_states:
       spi BOOLEAN,
       position_source INTEGER
       );
-    """
+    '
 
 flight_paths:
   create:
-    """
+    '
       CREATE TABLE flight_paths (
       path_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       last_update INTEGER,
@@ -39,11 +39,11 @@ flight_paths:
       finished BOOLEAN,
       UNIQUE (last_update, icao24)
       );
-    """
+    '
 
 airport_stats:
   create:
-    """
+    '
       CREATE TABLE airport_stats (
       record_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       airport_icao VARCHAR,
@@ -52,11 +52,11 @@ airport_stats:
       airplane_quantity_departures INTEGER,
       UNIQUE (airport_icao, date)
       );
-    """
+    '
 
 airports:
   create:
-    """
+    '
       CREATE TABLE airports (
       airport_id INTEGER PRIMARY KEY,
       name VARCHAR,
@@ -73,4 +73,4 @@ airports:
       type VARCHAR,
       source VARCHAR
       );
-    """
+    '
