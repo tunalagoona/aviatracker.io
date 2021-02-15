@@ -6,8 +6,8 @@ from config.parser import ConfigParser
 
 
 def fill_airports_table() -> None:
-    script_dir = os.path.abspath(__file__ + "/../../")
-    rel_path = "airports.rtf"
+    script_dir = os.path.abspath(__file__ + "/../../../")
+    rel_path = "extra/airports.rtf"
     path = os.path.join(script_dir, rel_path)
     with open(path, "rt") as f:
         lines = f.readlines()

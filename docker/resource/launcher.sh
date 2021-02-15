@@ -1,6 +1,6 @@
 rabbitmq-server -detached
 
-celery -A flighttracker.task_scheduling beat --detach -l INFO -f /flight-tracker/logs/celery.log -s /flight-tracker/beat/celerybeat-schedule
-celery -A flighttracker.task_scheduling worker --detach -l INFO -f /flight-tracker/logs/celery.log --without-gossip --without-mingle
+celery -A aviatracker.task_scheduling beat --detach -l INFO -f /aviatracker/logs/celery.log -s /aviatracker/beat/celerybeat-schedule
+celery -A aviatracker.task_scheduling worker --detach -l INFO -f /aviatracker/logs/celery.log --without-gossip --without-mingle
 
-python3 -m flighttracker.web.app
+python3 -m aviatracker.web.app

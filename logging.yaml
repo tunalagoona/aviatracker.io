@@ -9,7 +9,7 @@ handlers:
         class: logging.FileHandler
         level: INFO
         formatter: standard
-        filename: /flight-tracker/logs/main.log
+        filename: /aviatracker/logs/main.log
         mode: w+
 
 root:
