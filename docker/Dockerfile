@@ -21,7 +21,3 @@ RUN mkdir beat
 COPY flighttracker flighttracker
 COPY logging.yaml .
 COPY docker/resource/launcher.sh /aviatracker/
-
-
-
-

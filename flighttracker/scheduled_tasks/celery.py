@@ -2,10 +2,10 @@ from celery import Celery
 
 
 app = Celery(
-    "scheduled_tasks",
-    broker="pyamqp://guest@localhost//",
-    backend="rpc://",
-    include=["flighttracker.scheduled_tasks.tasks"],
+    'scheduled_tasks',
+    broker='pyamqp://guest@localhost//',
+    backend='rpc://',
+    include=['flighttracker.scheduled_tasks.tasks'],
 )
 
 app.conf.beat_schedule = {

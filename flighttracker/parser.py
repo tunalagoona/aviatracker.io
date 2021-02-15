@@ -3,9 +3,9 @@ import os
 import yaml
 
 
-class ConfigParser:
+class Config:
     def __init__(self):
-        path = os.path.join(os.path.abspath(__file__ + "/../../"), 'config/config.yaml')
+        path = os.path.join(os.path.abspath(__file__ + '/../../'), 'config/config.yaml')
 
         with open(path, 'r') as config:
             parsed_yaml_file = yaml.load(config, Loader=yaml.FullLoader)
