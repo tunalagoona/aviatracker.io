@@ -1,14 +1,7 @@
-# Created by .ignore support plugin (hsz.mobi)
-flighttracker/config.py
+**/.mypy_cache/
 .idea
-__pycache__/
-/opensky_network_docs.txt
-/gitflow-installer.sh
-/gitflow/
-/flighttracker/.mypy_cache/
 /venv/
 /beat/
 /logs/
+/extra/
 /config/config.yaml
-/config/__init__.py
-/airports.rtf
