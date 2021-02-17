@@ -25,10 +25,12 @@ def make_tables():
 def fill_airports(file: str) -> None:
     with open(file) as f:
         values = [line.split(",") for line in f.readlines()]
+        airports = []
+        for value in values:
+            airports.append(Airport(*value))
 
     with closing(DB(**common_conf.db_params)) as db:
-        for value in values:
-            db.insert(Airport(*value))
+        db.insert_airports(airports)
 
 
 @click.group()
