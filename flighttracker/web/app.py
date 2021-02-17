@@ -5,7 +5,7 @@ eventlet.monkey_patch()
 from contextlib import closing
 import threading
 import time
-from typing import List, Tuple, Dict
+from typing import List, Dict, Any
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO
@@ -39,65 +39,31 @@ def about():
 
 @socketio.on("connect")
 def connect() -> None:
-    logger.info("A client has been connected to the server")
+    logger.debug("A client has been connected to the server")
 
 
 @socketio.on("disconnect")
 def disconnect() -> None:
-    logger.info("A client has been disconnected from the server")
+    logger.debug("A client has been disconnected from the server")
 
 
 states_memo = None
 
 
-def fetch_vectors(params) -> None:
+def fetch_aircraft_states(params: Dict[str, Any]) -> None:
     with closing(DB(**params)) as db:
         while True:
-            logger.info("Fetching from DB has started")
-            vectors = db.get_current_states()
+            vectors: List[Dict] or None = db.get_current_states()
             quantity = len(vectors)
             global states_memo
             states_memo = vectors
-            logger.info(
-                f"Quantity of state vectors fetched from the DB for the time {vectors[0][0]}: "
-                f"{quantity}"
-            )
+            logger.info(f"Quantity of state vectors fetched from the DB for the time {vectors[0][0]}: " f"{quantity}")
             time.sleep(4)
-
-
-def make_object(vectors: List[Tuple] or None) -> List[Dict] or None:
-    if vectors is None:
-        return None
-    objects = []
-    for i in range(0, len(vectors)):
-        vector_object = {
-            "requestTime": vectors[i][0],
-            "icao24": vectors[i][1],
-            "callsign": vectors[i][2],
-            "originCountry": vectors[i][3],
-            "timePosition": vectors[i][4],
-            "lastContact": vectors[i][5],
-            "longitude": vectors[i][6],
-            "latitude": vectors[i][7],
-            "baroAltitude": vectors[i][8],
-            "onGround": vectors[i][9],
-            "velocity": vectors[i][10],
-            "trueTrack": vectors[i][11],
-            "verticalRate": vectors[i][12],
-            "sensors": vectors[i][13],
-            "geoAltitude": vectors[i][14],
-            "squawk": vectors[i][15],
-            "spi": vectors[i][16],
-            "positionSource": vectors[i][17],
-        }
-        objects.append(vector_object)
-    return objects
 
 
 def broadcast_vectors() -> None:
     while True:
-        vector_object = make_object(states_memo)
-        socketio.send(vector_object)
+        socketio.send(states_memo)
         eventlet.sleep(3)
         time.sleep(1)
 
@@ -109,7 +75,7 @@ def start_app() -> None:
 
 def start_webapp() -> None:
     fetching_thread = threading.Thread(
-        target=fetch_vectors,
+        target=fetch_aircraft_states,
         daemon=True,
         args=common_conf.db_params,
     )
