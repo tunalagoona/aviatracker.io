@@ -15,14 +15,9 @@ def make_tables():
 
     with closing(DB(**common_conf.db_params)) as db:
         with open(path, "r") as f:
-            for table_name in [
-                "current_states",
-                "flight_paths",
-                "airport_stats",
-                "airports",
-            ]:
-                script = yaml.load(f, Loader=yaml.FullLoader)[table_name]["create"]
-                db.execute_script(script)
+            scripts = yaml.load(f, Loader=yaml.FullLoader)
+            for key in scripts.keys:
+                db.execute_script(scripts[key])
 
 
 @click.command(name="fill-airports")
