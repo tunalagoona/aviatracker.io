@@ -9,8 +9,8 @@ from psycopg2 import connect
 from flighttracker.database import (
     Airport,
     column_value_to_str,
+    FlightAirportInfo,
     FlightPath,
-    OpenskyFlight,
     StateVector,
 )
 from flighttracker.opensky_api import OpenskyStates
@@ -47,6 +47,10 @@ class DB:
                 row = dict(value)
                 columns_str, values_str = column_value_to_str(value._fields)
                 with self.conn.cursor() as curs:
+                    """Row deletion can be implemented either by DELETE or by TRUNCATE TABLE.
+                    Though the DELETE option requires VACUUM to remove dead row versions,
+                    it is still preferred in our context as TRUNCATE would violate MVCC semantics
+                    and hinder parallel requests to access current states"""
                     curs.execute(
                         f"DELETE FROM current_states;"
                         f"INSERT INTO current_states ({columns_str})"
@@ -54,13 +58,10 @@ class DB:
                         row,
                     )
 
-    def get_last_inserted_state(self) -> List[Dict]:
+    def get_current_states(self) -> List[List]:
         with self.conn:
             with self.conn.cursor() as curs:
-                curs.execute(
-                    "SELECT * FROM current_states"
-                    "WHERE request_time = (SELECT MAX(request_time) FROM current_states);"
-                )
+                curs.execute("SELECT * FROM current_states")
                 vectors = curs.fetchall()
                 return vectors
 
@@ -80,7 +81,9 @@ class DB:
                 time = states[0]
 
                 api = OpenskyStates()
-                airports_response = api.get_airports(begin=time - 5, end=time + 5)
+                airports_response: List[FlightAirportInfo] = api.get_airports(
+                    begin=time - 5, end=time + 5
+                )
 
                 for state in states:
                     state = StateVector(**state)
@@ -92,12 +95,10 @@ class DB:
                     paths = curs.fetchall()
 
                     for flight in airports_response:
-                        flight = OpenskyFlight(*flight)
-
                         if flight["icao24"] == state["icao24"]:
                             departure_airport_icao = flight["estDepartureAirport"]
                             arrival_airport_icao = flight["estArrivalAirport"]
-                            estimated_arr_time = flight["lastSeen"]
+                            estimated_arr_time = flight["estArrivalTime"]
 
                             airport_icao = '"' + arrival_airport_icao + '"'
                             curs.execute(

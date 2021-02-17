@@ -21,6 +21,9 @@ class Config:
                 "allowed_origin"
             ]
 
+            self.opensky_user = parsed_yaml_file["opensky"]["user"]
+            self.opensky_pass = parsed_yaml_file["opensky"]["pass"]
+
     @property
     def db_params(self) -> Dict[str, Any]:
         return {
