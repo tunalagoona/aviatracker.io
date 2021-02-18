@@ -1,12 +1,12 @@
 import json
 import logging
 import time
-from datetime import date
-from typing import Dict, List
+from datetime import datetime
+from typing import Dict, List, Optional
 
 from psycopg2 import connect, extras
 
-from flighttracker.database import (
+from aviatracker.database import (
     Airport,
     AirportStats,
     column_value_to_str,
@@ -14,7 +14,7 @@ from flighttracker.database import (
     FlightPath,
     StateVector,
 )
-from flighttracker.opensky import OpenskyStates
+from aviatracker.opensky import OpenskyStates
 
 logger = logging.getLogger()
 
@@ -35,12 +35,14 @@ class DB:
                 insert_query = f"INSERT INTO airports ({columns_str}) VALUES %s"
                 template = f"({columns_str})"
                 extras.execute_values(curs, insert_query, airports, template)
+                logger.debug(f"Inserted {len(airports)} airports")
 
-    def insert_current_states(self, vectors: List[StateVector]) -> None:
+    def insert_current_states(self, aircraft_states: List[StateVector]) -> None:
+        resp_time: int = aircraft_states[0]["request_time"]
         with self.conn:
-            for vector in vectors:
-                row = dict(vector)
-                columns_str, values_str = column_value_to_str(vector._fields)
+            for state in aircraft_states:
+                row = dict(state)
+                columns_str, values_str = column_value_to_str(state._fields)
                 with self.conn.cursor() as curs:
                     """Row deletion can be implemented either by DELETE or by TRUNCATE TABLE.
                     Though the DELETE option requires VACUUM to remove dead row versions,
@@ -52,16 +54,18 @@ class DB:
                         f"INSERT INTO current_states ({columns_str}) VALUES ({values_str})",
                         row,
                     )
+            logger.debug(f"Inserted {len(aircraft_states)} aircraft states for the timestamp {resp_time}")
 
-    def get_current_states(self) -> List[Dict] or None:
+    def get_current_states(self) -> Optional[List[Dict]]:
         with self.conn:
             with self.conn.cursor() as curs:
                 curs.execute("SELECT * FROM current_states")
-                vectors = curs.fetchall()
-                state_vectors = []
-                for vector in vectors:
-                    state_vectors.append(dict(StateVector(*vector)))
-                return state_vectors
+                aircraft_states = curs.fetchall()
+                if len(aircraft_states) != 0:
+                    states = []
+                    for state in aircraft_states:
+                        states.append(dict(StateVector(*state)))
+                    return states
 
     def insert_new_path(self, path: FlightPath) -> None:
         columns_str, values_str = column_value_to_str(path._fields)
@@ -70,6 +74,7 @@ class DB:
                 f"INSERT INTO flight_paths ({columns_str})" f"VALUES ({values_str})",
                 dict(path),
             )
+        logger.info("Inserted new path")
 
     def update_paths(self) -> None:
         with self.conn.cursor() as curs:
@@ -98,7 +103,7 @@ class DB:
 
                             airport_icao = '"' + arrival_airport_icao + '"'
                             curs.execute(
-                                "SELECT latitude, longitude FROM airports" "WHERE icao = %s",
+                                "SELECT latitude, longitude FROM airports WHERE icao = %s",
                                 airport_icao,
                             )
                             airport = Airport(*curs.fetchone())
@@ -137,13 +142,14 @@ class DB:
                     else:
                         curs.execute(
                             "UPDATE flight_paths"
-                            f"SET path = path || %s::jsonb "
+                            "SET path = path || %s::jsonb "
                             "WHERE icao24 = %s AND last_update = %s",
-                            (path, state[1], latest_update),
+                            (path, state["icao24"], latest_update),
                         )
+                        logger.debug("Path has been updated")
 
-    def update_stats_for_one_airport(self, airport_icao: str, is_arrival: bool) -> None:
-        today = date.today().strftime("%b-%d-%Y")
+    def update_stats_for_one_airport(self, airport_icao: str, last_update: int, is_arrival: bool) -> None:
+        update_day = datetime.fromtimestamp(last_update).strftime('%Y/%m/%d')
 
         if is_arrival:
             quantity_of_new_arrivals = 1
@@ -153,7 +159,8 @@ class DB:
             quantity_of_new_departures = 1
 
         with self.conn.cursor() as curs:
-            curs.execute("SELECT * FROM airport_stats" "WHERE airport_icao = %s AND date = %s", (airport_icao, today))
+            curs.execute("SELECT * FROM airport_stats" "WHERE airport_icao = %s AND date = %s OR date = %s",
+                         (airport_icao, update_day))
             stats = AirportStats(*curs.fetchone())
 
             if len(stats) == 0:
@@ -165,11 +172,11 @@ class DB:
                 )
 
                 columns_str, values_str = column_value_to_str(new_stats._fields)
-
                 curs.execute(
                     f"INSERT INTO airport_stats ({columns_str})" f"VALUES ({values_str})",
                     new_stats,
                 )
+                logger.debug("Added new statistics record for an airport")
 
             else:
                 curs.execute(
@@ -178,11 +185,11 @@ class DB:
                     "WHERE airport_icao = (%s) AND date_today = (%s)",
                     (stats["airport_icao"], stats["date"]),
                 )
+                logger.debug("Updated statistics record for an airport")
 
     def update_airport_stats(self) -> None:
         with self.conn.cursor() as curs:
             time_now = time.time()
-            logger.info(f"time now = {time_now}")
 
             curs.execute("SELECT * FROM flight_paths" "WHERE ((%s) - last_update) < 3600 AND finished = True", time_now)
             paths = curs.fetchall()
@@ -192,8 +199,8 @@ class DB:
                 arrival_airport = path["arrival_airport_icao"]
                 departure_airport = path["departure_airport_icao"]
 
-            self.update_stats_for_one_airport(arrival_airport)
-            self.update_stats_for_one_airport(departure_airport)
+                self.update_stats_for_one_airport(arrival_airport, path["last_update"], True)
+                self.update_stats_for_one_airport(departure_airport, path["last_update"], False)
 
     def execute_script(self, script: str) -> None:
         with self.conn:

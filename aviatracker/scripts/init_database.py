@@ -4,9 +4,9 @@ from contextlib import closing
 import click
 import yaml
 
-from flighttracker.config import common_conf
-from flighttracker.database import Airport
-from flighttracker.database.database import DB
+from aviatracker.config import common_conf
+from aviatracker.database import Airport
+from aviatracker.database.database import DB
 
 
 @click.command(name="make-tables")

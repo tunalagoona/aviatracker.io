@@ -1,4 +1,3 @@
-import logging
 import sys
 import time
 from contextlib import closing
@@ -8,13 +7,12 @@ from celery.app.log import TaskFormatter
 from celery.signals import after_setup_task_logger
 from celery.utils.log import get_task_logger
 
-from flighttracker.config import common_conf
-from flighttracker.database import DB, StateVector
-from flighttracker.opensky import OpenskyStates
-from flighttracker.scheduled_tasks.celery import app
+from aviatracker.config import common_conf
+from aviatracker.database import DB, StateVector
+from aviatracker.opensky import OpenskyStates
+from aviatracker.scheduled_tasks.celery import app
 
 logger = get_task_logger(__name__)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 
 @after_setup_task_logger.connect
@@ -27,18 +25,17 @@ def update_aircraft_states(cur_time: int) -> None:
     api = OpenskyStates()
     try:
         with closing(DB(**common_conf.db_params)) as db:
-            logger.info(f"A request has been sent to API for the timestamp: {cur_time}")
+            logger.debug(f"A request has been sent to API for the timestamp: {cur_time}")
             states: List[Dict] or None = api.get_current_states(time_sec=cur_time)
-            logger.info(f"A response has been received from API for the timestamp: {cur_time}")
+            logger.debug(f"A response has been received from API for the timestamp: {cur_time}")
+
             quantity = len(states)
             if quantity != 0:
-                resp_time: int = states[0]["request_time"]
-                state_vectors = []
+                aircraft_states = []
                 for state in states:
-                    state_vectors.append(StateVector(**state))
+                    aircraft_states.append(StateVector(**state))
 
-                db.insert_current_states(state_vectors)
-                logger.info(f"{quantity} state vectors inserted to DB for the timestamp {resp_time}")
+                db.insert_current_states(aircraft_states)
 
     except Exception as e:
         logger.exception(f"Exception: {e}")

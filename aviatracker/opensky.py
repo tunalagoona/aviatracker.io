@@ -5,8 +5,8 @@ from typing import Dict, List, Optional
 
 from requests import exceptions, get
 
-from flighttracker.config import common_conf
-from flighttracker.database import FlightAirportInfo, StateVector
+from aviatracker.config import common_conf
+from aviatracker.database import FlightAirportInfo, StateVector
 
 logger = logging.getLogger()
 
@@ -34,7 +34,7 @@ class OpenskyStates(object):
                 logger.error(f"Could not connect to Opensky API. Status code is {r.status_code}.")
 
         except (OSError, exceptions.ReadTimeout, socket.timeout) as e:
-            logger.error(f"Could not get state vectors from API: {e}")
+            logger.error(f"Could not get states from API: {e}")
 
     def get_current_states(self, time_sec: int = 0, icao24: str = None) -> List[StateVector]:
         parameters = {"time": int(time_sec), "icao24": icao24}
