@@ -62,3 +62,7 @@ FlightAirportInfo = namedtuple(
     "FlightAirportInfo",
     ["icao24", "estDepartureAirport", "estArrivalAirport", "estArrivalTime"],
 )
+
+AirportStats = namedtuple(
+    "AirportStats", ["airport_icao", "date", "airplane_quantity_arrivals", "airplane_quantity_departures"]
+)
