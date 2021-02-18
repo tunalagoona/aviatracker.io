@@ -4,16 +4,17 @@ import time
 from datetime import date
 from typing import Dict, List
 
-from flighttracker.opensky_api import OpenskyStates
 from psycopg2 import connect, extras
 
 from flighttracker.database import (
     Airport,
+    AirportStats,
     column_value_to_str,
     FlightAirportInfo,
     FlightPath,
     StateVector,
 )
+from flighttracker.opensky import OpenskyStates
 
 logger = logging.getLogger()
 
@@ -45,8 +46,10 @@ class DB:
                     Though the DELETE option requires VACUUM to remove dead row versions,
                     it is still preferred in our context as TRUNCATE would violate MVCC semantics
                     and hinder parallel requests to access current states"""
+
                     curs.execute(
-                        f"DELETE FROM current_states;" f"INSERT INTO current_states ({columns_str}) VALUES ({values_str})",
+                        f"DELETE FROM current_states;"
+                        f"INSERT INTO current_states ({columns_str}) VALUES ({values_str})",
                         row,
                     )
 
@@ -107,15 +110,17 @@ class DB:
                     latest_update = 0
                     max_ind = 0
                     for i in range(0, len(paths)):
-                        if paths[i][1] > latest_update:
-                            latest_update = paths[i][1]
+                        paths[i] = FlightPath(*paths[i])
+                        if paths[i]["last_update"] > latest_update:
+                            latest_update = paths[i]["last_update"]
                             max_ind = i
+
+                    current_location = {
+                        "longitude": state["longitude"],
+                        "latitude": state["latitude"],
+                    }
+                    path = [json.dumps(current_location)]
                     if len(paths) == 0 or paths[max_ind][9] is True:
-                        first_location = {
-                            "longitude": state["longitude"],
-                            "latitude": state["latitude"],
-                        }
-                        path = [json.dumps(first_location)]
                         new_path = FlightPath(
                             last_update=state["request_time"],
                             icao24=state["icao24"],
@@ -130,106 +135,65 @@ class DB:
                         self.insert_new_path(new_path)
 
                     else:
-                        if paths[max_ind][9] is True:
-                            self.insert_new_path(state, flight_info)
-                        else:
-                            current_location = {
-                                "longitude": state[6],
-                                "latitude": state[7],
-                            }
-                            add_path = [json.dumps(current_location)]
+                        curs.execute(
+                            "UPDATE flight_paths"
+                            f"SET path = path || %s::jsonb "
+                            "WHERE icao24 = %s AND last_update = %s",
+                            (path, state[1], latest_update),
+                        )
 
-                            update_sql = """
-                                UPDATE flight_paths
-                                SET path = path || %s::jsonb
-                                WHERE icao24 = state[1] AND last_update = latest_update
-                            """
-                            curs.execute(update_sql, add_path)
+    def update_stats_for_one_airport(self, airport_icao: str, is_arrival: bool) -> None:
+        today = date.today().strftime("%b-%d-%Y")
+
+        if is_arrival:
+            quantity_of_new_arrivals = 1
+            quantity_of_new_departures = 0
+        else:
+            quantity_of_new_arrivals = 0
+            quantity_of_new_departures = 1
+
+        with self.conn.cursor() as curs:
+            curs.execute("SELECT * FROM airport_stats" "WHERE airport_icao = %s AND date = %s", (airport_icao, today))
+            stats = AirportStats(*curs.fetchone())
+
+            if len(stats) == 0:
+                new_stats = AirportStats(
+                    airport_icao=airport_icao,
+                    date=today,
+                    airplane_quantity_arrivals=quantity_of_new_arrivals,
+                    airplane_quantity_departures=quantity_of_new_departures,
+                )
+
+                columns_str, values_str = column_value_to_str(new_stats._fields)
+
+                curs.execute(
+                    f"INSERT INTO airport_stats ({columns_str})" f"VALUES ({values_str})",
+                    new_stats,
+                )
+
+            else:
+                curs.execute(
+                    "UPDATE airport_stats"
+                    "SET airplane_quantity_arrivals = airplane_quantity_arrivals + 1"
+                    "WHERE airport_icao = (%s) AND date_today = (%s)",
+                    (stats["airport_icao"], stats["date"]),
+                )
 
     def update_airport_stats(self) -> None:
         with self.conn.cursor() as curs:
-            today = date.today()
-            today_date = today.strftime("%b-%d-%Y")
-
             time_now = time.time()
             logger.info(f"time now = {time_now}")
 
-            curs.execute(
-                """
-                    SELECT * FROM flight_paths
-                    WHERE ((%s) - last_update) < 3600 AND finished = True
-                """,
-                (time_now,),
-            )
-
+            curs.execute("SELECT * FROM flight_paths" "WHERE ((%s) - last_update) < 3600 AND finished = True", time_now)
             paths = curs.fetchall()
-            counts = {}
+
             for path in paths:
-                arr_airport = path[4]
-                dep_airport = path[3]
+                path = FlightPath(*path)
+                arrival_airport = path["arrival_airport_icao"]
+                departure_airport = path["departure_airport_icao"]
 
-                curs.execute(
-                    """
-                       SELECT * FROM airport_stats
-                       WHERE airport_icao = arr_airport AND date = today_date;
-                    """
-                )
-                stats = curs.fetchall()
-
-                if len(stats) == 0:
-                    info = {
-                        "airport_icao": arr_airport,
-                        "date_today": today_date,
-                        "airplane_quantity_arrivals": 1,
-                        "airplane_quantity_departures": 0,
-                    }
-                    curs.execute(
-                        """
-                            INSERT INTO airport_stats (airport_icao, date, airplane_quantity_arrivals, airplane_quantity_departures)
-                            VALUES (%(airport_icao)s, %(date_today)s, %(airplane_quantity_arrivals)s, %(airplane_quantity_departures)s)
-                        """,
-                        info,
-                    )
-                else:
-                    curs.execute(
-                        """
-                            UPDATE airport_stats
-                            SET airplane_quantity_arrivals = airplane_quantity_arrivals + 1
-                            WHERE airport_icao = (%s) AND date_today = (%s)
-                        """,
-                        (stats[0][1], stats[0][2]),
-                    )
-
-                curs.execute(
-                    """
-                        SELECT * FROM airport_stats
-                        WHERE airport_icao = dep_airport AND date = today_date;
-                    """
-                )
-                stats = curs.fetchall()
-                if len(stats) == 0:
-                    info = {
-                        "airport_icao": dep_airport,
-                        "date_today": today_date,
-                        "airplane_quantity_arrivals": 0,
-                        "airplane_quantity_departures": 1,
-                    }
-                    curs.execute(
-                        """
-                            INSERT INTO airport_stats (airport_icao, date, airplane_quantity_arrivals, airplane_quantity_departures)
-                            VALUES (%(airport_icao)s, %(date_today)s, %(airplane_quantity_arrivals)s, %(airplane_quantity_departures)s)
-                        """,
-                        info,
-                    )
-                else:
-                    curs.execute(
-                        """
-                            UPDATE airport_stats
-                            SET airplane_quantity_departures = airplane_quantity_departures + 1
-                            WHERE airport_icao = (%s) AND date_today = (%s)
-                        """,
-                        (stats[0][1], stats[0][2]),
-                    )
+            self.update_stats_for_one_airport(arrival_airport)
+            self.update_stats_for_one_airport(departure_airport)
 
     def execute_script(self, script: str) -> None:
         with self.conn:
