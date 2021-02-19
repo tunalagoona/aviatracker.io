@@ -28,6 +28,12 @@ class DB:
                 curs.execute("SELECT 1;")
         logger.info(f"Connected to the Postgres database - {user}@{host}:{port}/{name}")
 
+    def set_timezone(self):
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "SET timezone = 0;"
+            )
+
     def insert_airports(self, airports: List[Airport]) -> None:
         with self.conn:
             with self.conn.cursor() as curs:
@@ -76,24 +82,27 @@ class DB:
             )
         logger.info("Inserted new path")
 
-    # def delete_outdated_records(self, table, type):
-    #     time_now = time.time()
-    #     with self.conn.cursor() as curs:
-    #         curs.execute(f"SELECT * FROM {table}")
-    #         all_records = curs.fetchall()
-    #
-    #         for record in all_records:
-    #             if type == "FlightPath":
-    #                 record = FlightPath(*record)
-    #                 timestamp = record["last_update"]
-    #                 validity = 432000
-    #             elif type == "AirportStats":
-    #                 record = AirportStats(*record)
-    #                 timestamp =
-    #                 validity = 2592000
-    #             if time_now - validity > timestamp:
-    #                 curs.execute(f"DELETE FROM {table} WHERE icao = %s AND last_update = %s",
-    #                              (record["icao"]), record["last_update"])
+    def delete_outdated_records(self, table: str) -> None:
+        """Timestamp of a record is compared to current timestamp with time zone."""
+        with self.conn.cursor() as curs:
+            if table == "flight_paths":
+                time_mark = "finished_at"
+                interval = "5 days"
+
+                curs.execute(
+                    "DELETE FROM %s"
+                    "WHERE now() - (TIMESTAMP WITH TIME ZONE 'epoch' + %s * INTERVAL '1 second') > interval %s",
+                    (table, time_mark, interval)
+                )
+
+            elif table == "airport_stats":
+                time_mark = "date"
+                interval = "1 month"
+
+                curs.execute(
+                    "DELETE FROM %s"
+                    "WHERE now() - %s > interval %s", (table, time_mark, interval)
+                )
 
     def update_finished_flag(self):
         with self.conn.cursor() as curs:
@@ -106,7 +115,7 @@ class DB:
         with self.conn.cursor() as curs:
             time_now = time.time()
 
-            # self.delete_outdated_records(table, type)
+            self.delete_outdated_records("flight_paths")
             self.update_finished_flag()
 
             curs.execute("SELECT * FROM current_states;")
@@ -180,7 +189,7 @@ class DB:
                         logger.debug("Path has been updated")
 
     def update_stats_for_one_airport(self, airport_icao: str, last_update: int, is_arrival: bool) -> None:
-        update_day = datetime.fromtimestamp(last_update).strftime('%Y/%m/%d')
+        update_day = datetime.fromtimestamp(last_update).strftime('%Y-%m-%d')
 
         if is_arrival:
             quantity_of_new_arrivals = 1
@@ -225,7 +234,7 @@ class DB:
             curs.execute("SELECT * FROM flight_paths" "WHERE ((%s) - last_update) < 3600 AND finished = True", time_now)
             paths = curs.fetchall()
 
-            # self.delete_outdated_records(table, type)
+            self.delete_outdated_records("airport_stats")
 
             for path in paths:
                 path = FlightPath(*path)
