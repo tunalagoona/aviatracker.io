@@ -76,15 +76,46 @@ class DB:
             )
         logger.info("Inserted new path")
 
+    # def delete_outdated_records(self, table, type):
+    #     time_now = time.time()
+    #     with self.conn.cursor() as curs:
+    #         curs.execute(f"SELECT * FROM {table}")
+    #         all_records = curs.fetchall()
+    #
+    #         for record in all_records:
+    #             if type == "FlightPath":
+    #                 record = FlightPath(*record)
+    #                 timestamp = record["last_update"]
+    #                 validity = 432000
+    #             elif type == "AirportStats":
+    #                 record = AirportStats(*record)
+    #                 timestamp =
+    #                 validity = 2592000
+    #             if time_now - validity > timestamp:
+    #                 curs.execute(f"DELETE FROM {table} WHERE icao = %s AND last_update = %s",
+    #                              (record["icao"]), record["last_update"])
+
+    def update_finished_flag(self):
+        with self.conn.cursor() as curs:
+            time_now = time.time()
+            curs.execute(
+                f"UPDATE flight_paths SET finished = True WHERE finished = False AND %s - last_update > 1800", time_now
+            )
+
     def update_paths(self) -> None:
         with self.conn.cursor() as curs:
+            time_now = time.time()
+
+            # self.delete_outdated_records(table, type)
+            self.update_finished_flag()
+
             curs.execute("SELECT * FROM current_states;")
             states = curs.fetchall()
             if len(states) > 0:
-                time = states[0]
+                cur_states_time = states[0][0]
 
                 api = OpenskyStates()
-                airports_response: List[FlightAirportInfo] = api.get_airports(begin=time - 5, end=time + 5)
+                airports_response: List[FlightAirportInfo] = api.get_airports(begin=cur_states_time - 5, end=cur_states_time + 5)
 
                 for state in states:
                     state = StateVector(**state)
@@ -193,6 +224,8 @@ class DB:
 
             curs.execute("SELECT * FROM flight_paths" "WHERE ((%s) - last_update) < 3600 AND finished = True", time_now)
             paths = curs.fetchall()
+
+            # self.delete_outdated_records(table, type)
 
             for path in paths:
                 path = FlightPath(*path)
