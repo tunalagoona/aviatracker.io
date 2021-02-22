@@ -36,6 +36,7 @@ FlightPath = namedtuple(
         "estimated_arrival_time",
         "path",
         "finished",
+        "finished_at"
     ],
 )
 
