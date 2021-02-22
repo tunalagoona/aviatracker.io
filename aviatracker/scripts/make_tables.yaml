@@ -35,8 +35,16 @@ flight_paths:
       estimated_arrival_time INTEGER,
       path JSONB,
       finished BOOLEAN,
+      finished_at INTEGER,
       UNIQUE (last_update, icao24)
     );
+  '
+
+airport_stats_last_update:
+  '
+    CREATE TABLE IF NOT EXISTS airport_stats_last_update (
+      update_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      last_stats_update_time INTEGER,
   '
 
 airport_stats:

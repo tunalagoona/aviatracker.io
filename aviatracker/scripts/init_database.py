@@ -14,6 +14,9 @@ def make_tables():
     path = os.path.join(os.path.dirname(__file__), "make_tables.yaml")
 
     with closing(DB(**common_conf.db_params)) as db:
+
+        db.set_timezone()
+
         with open(path, "r") as f:
             scripts = yaml.load(f, Loader=yaml.FullLoader)
             for key in scripts.keys:
