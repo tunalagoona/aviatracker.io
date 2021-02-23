@@ -52,13 +52,14 @@ states_memo = None
 
 def fetch_aircraft_states(params: Dict[str, Any]) -> None:
     with closing(DB(**params)) as db:
-        while True:
-            vectors: Optional[List[Dict]] = db.get_current_states()
-            quantity = len(vectors)
-            global states_memo
-            states_memo = vectors
-            logger.info(f"{quantity} states fetched from the DB for the time {vectors[0][0]}")
-            time.sleep(4)
+        with db:
+            while True:
+                vectors: Optional[List[Dict]] = db.get_current_states()
+                quantity = len(vectors)
+                global states_memo
+                states_memo = vectors
+                logger.info(f"{quantity} states fetched from the DB for the time {vectors[0][0]}")
+                time.sleep(4)
 
 
 def broadcast_states() -> None:

@@ -14,13 +14,14 @@ def make_tables():
     path = os.path.join(os.path.dirname(__file__), "make_tables.yaml")
 
     with closing(DB(**common_conf.db_params)) as db:
+        with db:
 
-        db.set_timezone()
+            db.set_timezone()
 
-        with open(path, "r") as f:
-            scripts = yaml.load(f, Loader=yaml.FullLoader)
-            for key in scripts.keys:
-                db.execute_script(scripts[key])
+            with open(path, "r") as f:
+                scripts = yaml.load(f, Loader=yaml.FullLoader)
+                for key in scripts.keys:
+                    db.execute_script(scripts[key])
 
 
 @click.command(name="fill-airports")
@@ -33,7 +34,8 @@ def fill_airports(file: str) -> None:
             airports.append(Airport(*value))
 
     with closing(DB(**common_conf.db_params)) as db:
-        db.insert_airports(airports)
+        with db:
+            db.insert_airports(airports)
 
 
 @click.group()

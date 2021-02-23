@@ -23,6 +23,7 @@ class DB:
     def __init__(self, name: str, user: str, password: str, host: str, port: int) -> None:
         logger.info(f"Connecting to the PostgreSQL database - {user}@{host}:{port}/{name}")
         self.conn = connect(dbname=name, user=user, password=password, host=host, port=port)
+
         with self.conn:
             with self.conn.cursor() as curs:
                 curs.execute("SELECT 1;")
@@ -67,11 +68,11 @@ class DB:
             with self.conn.cursor() as curs:
                 curs.execute("SELECT * FROM current_states")
                 aircraft_states = curs.fetchall()
+                states = []
                 if len(aircraft_states) != 0:
-                    states = []
                     for state in aircraft_states:
                         states.append(dict(StateVector(*state)))
-                    return states
+                return states
 
     def insert_new_path(self, path: FlightPath) -> None:
         columns_str, values_str = column_value_to_str(path._fields)
@@ -82,27 +83,16 @@ class DB:
             )
         logger.info("Inserted new path")
 
-    def delete_outdated_records(self, table: str) -> None:
+    def delete_outdated_records(self, table: str, time_mark, interval) -> None:
+        #  interval for flight-paths should be "5 days", for "airport_stats" - "1 month"
+        # time_mark "finished_at" or time_mark = "date"
         """Timestamp of a record is compared to current timestamp with time zone."""
         with self.conn.cursor() as curs:
-            if table == "flight_paths":
-                time_mark = "finished_at"
-                interval = "5 days"
-
-                curs.execute(
-                    "DELETE FROM %s"
-                    "WHERE now() - (TIMESTAMP WITH TIME ZONE 'epoch' + %s * INTERVAL '1 second') > interval %s",
-                    (table, time_mark, interval)
-                )
-
-            elif table == "airport_stats":
-                time_mark = "date"
-                interval = "1 month"
-
-                curs.execute(
-                    "DELETE FROM %s"
-                    "WHERE now() - %s > interval %s", (table, time_mark, interval)
-                )
+            curs.execute(
+                "DELETE FROM %s"
+                "WHERE now() - (TIMESTAMP WITH TIME ZONE 'epoch' + %s * INTERVAL '1 second') > interval %s",
+                (table, time_mark, interval)
+            )
 
     def update_finished_flag(self):
         with self.conn.cursor() as curs:
@@ -111,82 +101,13 @@ class DB:
                 f"UPDATE flight_paths SET finished = True WHERE finished = False AND %s - last_update > 1800", time_now
             )
 
-    def update_paths(self) -> None:
-        with self.conn.cursor() as curs:
-            time_now = time.time()
+    @staticmethod
+    def find_unfinished_path_for_aircraft() -> str:
+        return "SELECT * FROM flight_paths WHERE icao24 = %s AND finished = False"
 
-            self.delete_outdated_records("flight_paths")
-            self.update_finished_flag()
-
-            curs.execute("SELECT * FROM current_states;")
-            states = curs.fetchall()
-            if len(states) > 0:
-                cur_states_time = states[0][0]
-
-                api = OpenskyStates()
-                airports_response: List[FlightAirportInfo] = api.get_airports(begin=cur_states_time - 5, end=cur_states_time + 5)
-
-                for state in states:
-                    state = StateVector(**state)
-
-                    curs.execute(
-                        "SELECT * FROM flight_paths" "WHERE icao24 = %s",
-                        state["icao24"],
-                    )
-                    paths = curs.fetchall()
-
-                    for flight in airports_response:
-                        if flight["icao24"] == state["icao24"]:
-                            departure_airport_icao = flight["estDepartureAirport"]
-                            arrival_airport_icao = flight["estArrivalAirport"]
-                            estimated_arr_time = flight["estArrivalTime"]
-
-                            airport_icao = '"' + arrival_airport_icao + '"'
-                            curs.execute(
-                                "SELECT latitude, longitude FROM airports WHERE icao = %s",
-                                airport_icao,
-                            )
-                            airport = Airport(*curs.fetchone())
-
-                            arrival_airport_lat = airport["latitude"]
-                            arrival_airport_long = airport["longitude"]
-                            break
-
-                    latest_update = 0
-                    max_ind = 0
-                    for i in range(0, len(paths)):
-                        paths[i] = FlightPath(*paths[i])
-                        if paths[i]["last_update"] > latest_update:
-                            latest_update = paths[i]["last_update"]
-                            max_ind = i
-
-                    current_location = {
-                        "longitude": state["longitude"],
-                        "latitude": state["latitude"],
-                    }
-                    path = [json.dumps(current_location)]
-                    if len(paths) == 0 or paths[max_ind][9] is True:
-                        new_path = FlightPath(
-                            last_update=state["request_time"],
-                            icao24=state["icao24"],
-                            departure_airport_icao=departure_airport_icao,
-                            arrival_airport_icao=arrival_airport_icao,
-                            arrival_airport_long=arrival_airport_long,
-                            arrival_airport_lat=arrival_airport_lat,
-                            estimated_arrival_time=estimated_arr_time,
-                            path=path,
-                            finished=False,
-                        )
-                        self.insert_new_path(new_path)
-
-                    else:
-                        curs.execute(
-                            "UPDATE flight_paths"
-                            "SET path = path || %s::jsonb "
-                            "WHERE icao24 = %s AND last_update = %s",
-                            (path, state["icao24"], latest_update),
-                        )
-                        logger.debug("Path has been updated")
+    @staticmethod
+    def get_airport_long_lat() -> str:
+        return "SELECT latitude, longitude FROM airports WHERE icao = %s"
 
     def update_stats_for_one_airport(self, airport_icao: str, last_update: int, is_arrival: bool) -> None:
         update_day = datetime.fromtimestamp(last_update).strftime('%Y-%m-%d')
@@ -228,6 +149,8 @@ class DB:
                 logger.debug("Updated statistics record for an airport")
 
     def update_airport_stats(self) -> None:
+        # Change to: update since the last timestamp written in airport_stats_last_update table
+        # + update this table after stats update
         with self.conn.cursor() as curs:
             time_now = time.time()
 
@@ -251,3 +174,9 @@ class DB:
 
     def close(self) -> None:
         self.conn.close()
+
+    def __enter__(self):
+        return self.conn.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.conn.__exit__(exc_type, exc_val, exc_tb)

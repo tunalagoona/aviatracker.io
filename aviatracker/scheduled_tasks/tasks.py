@@ -25,17 +25,18 @@ def update_aircraft_states(cur_time: int) -> None:
     api = OpenskyStates()
     try:
         with closing(DB(**common_conf.db_params)) as db:
-            logger.debug(f"A request has been sent to API for the timestamp: {cur_time}")
-            states: List[Dict] or None = api.get_current_states(time_sec=cur_time)
-            logger.debug(f"A response has been received from API for the timestamp: {cur_time}")
+            with db:
+                logger.debug(f"A request has been sent to API for the timestamp: {cur_time}")
+                states: List[Dict] or None = api.get_current_states(time_sec=cur_time)
+                logger.debug(f"A response has been received from API for the timestamp: {cur_time}")
 
-            quantity = len(states)
-            if quantity != 0:
-                aircraft_states = []
-                for state in states:
-                    aircraft_states.append(StateVector(**state))
+                quantity = len(states)
+                if quantity != 0:
+                    aircraft_states = []
+                    for state in states:
+                        aircraft_states.append(StateVector(**state))
 
-                db.insert_current_states(aircraft_states)
+                    db.insert_current_states(aircraft_states)
 
     except Exception as e:
         logger.exception(f"Exception: {e}")
@@ -44,8 +45,9 @@ def update_aircraft_states(cur_time: int) -> None:
 def update_flight_paths() -> None:
     try:
         with closing(DB(**common_conf.db_params)) as db:
-            logger.info("Starting flight paths update")
-            db.update_paths()
+            with db:
+                logger.info("Starting flight paths update")
+                db.update_paths()
     except Exception as e:
         logger.exception(f"Exception: {e}")
 
@@ -53,8 +55,9 @@ def update_flight_paths() -> None:
 def update_airport_stats() -> None:
     try:
         with closing(DB(**common_conf.db_params)) as db:
-            logger.info("Starting airports statistics update")
-            db.update_airport_stats()
+            with db:
+                logger.info("Starting airports statistics update")
+                db.update_airport_stats()
     except Exception as e:
         logger.exception(f"Exception: {e}")
 
