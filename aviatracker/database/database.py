@@ -2,7 +2,7 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from psycopg2 import connect, extras
 
@@ -74,7 +74,7 @@ class DB:
                         states.append(dict(StateVector(*state)))
                 return states
 
-    def insert_new_path(self, path: FlightPath) -> None:
+    def insert_path(self, path: FlightPath) -> None:
         columns_str, values_str = column_value_to_str(path._fields)
         with self.conn.cursor() as curs:
             curs.execute(
@@ -83,31 +83,54 @@ class DB:
             )
         logger.info("Inserted new path")
 
-    def delete_outdated_records(self, table: str, time_mark, interval) -> None:
-        #  interval for flight-paths should be "5 days", for "airport_stats" - "1 month"
-        # time_mark "finished_at" or time_mark = "date"
-        """Timestamp of a record is compared to current timestamp with time zone."""
+    def delete_outdated_paths(self) -> None:
+        """A timestamp of a record was finished is compared to the current timestamp with time zone."""
         with self.conn.cursor() as curs:
             curs.execute(
-                "DELETE FROM %s"
-                "WHERE now() - (TIMESTAMP WITH TIME ZONE 'epoch' + %s * INTERVAL '1 second') > interval %s",
-                (table, time_mark, interval)
+                "DELETE FROM flight_paths "
+                "WHERE now() - to_timestamp(finished_at) > interval '5 days' AND finished_at != 0;"
             )
 
-    def update_finished_flag(self):
+    def update_finished_flag(self) -> None:
+        """Updates finished and finished_at columns of flight_paths for records with no update for more then 30 min."""
         with self.conn.cursor() as curs:
-            time_now = time.time()
+            time_now = int(time.time())
             curs.execute(
-                f"UPDATE flight_paths SET finished = True WHERE finished = False AND %s - last_update > 1800", time_now
+                f"UPDATE flight_paths SET finished = True, finished_at = %s WHERE finished = False "
+                f"AND %s - last_update > 1800", (time_now, time_now)
             )
 
-    @staticmethod
-    def find_unfinished_path_for_aircraft() -> str:
-        return "SELECT * FROM flight_paths WHERE icao24 = %s AND finished = False"
+    def find_unfinished_path_for_aircraft(self, icao) -> FlightPath:
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "SELECT * FROM flight_paths WHERE icao24 = %s AND finished = False", (icao,)
+            )
+            path = FlightPath(*curs.fetchone())
+            return path
 
-    @staticmethod
-    def get_airport_long_lat() -> str:
-        return "SELECT latitude, longitude FROM airports WHERE icao = %s"
+    def get_airport_long_lat(self, airport_icao: str) -> Tuple[float, float]:
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "SELECT longitude, latitude FROM airports WHERE icao = %s", (airport_icao,)
+            )
+            longitude, latitude = curs.fetchone()
+        return longitude, latitude
+
+    def update_unfinished_path(self, icao, last_update, path_travelled):
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "UPDATE flight_paths SET path = path || %s::jsonb "
+                "WHERE icao24 = %s AND last_update = %s", (path_travelled, icao, last_update)
+            )
+            logger.debug("Path has been updated")
+
+    def delete_outdated_stats(self) -> None:
+        """Timestamp of a record is compared to the current timestamp with time zone."""
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "DELETE FROM airport_stats"
+                "WHERE now() - (TIMESTAMP WITH TIME ZONE 'epoch' + date * INTERVAL '1 second') > interval '1 month' "
+            )
 
     def update_stats_for_one_airport(self, airport_icao: str, last_update: int, is_arrival: bool) -> None:
         update_day = datetime.fromtimestamp(last_update).strftime('%Y-%m-%d')
