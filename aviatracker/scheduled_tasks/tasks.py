@@ -11,6 +11,7 @@ from aviatracker.config import common_conf
 from aviatracker.database import DB, StateVector
 from aviatracker.opensky import OpenskyStates
 from aviatracker.scheduled_tasks.celery import app
+from aviatracker.core import update_flight_paths
 
 logger = get_task_logger(__name__)
 
@@ -27,27 +28,18 @@ def update_aircraft_states(cur_time: int) -> None:
         with closing(DB(**common_conf.db_params)) as db:
             with db:
                 logger.debug(f"A request has been sent to API for the timestamp: {cur_time}")
-                states: List[Dict] or None = api.get_current_states(time_sec=cur_time)
+                states: List[StateVector] or None = api.get_current_states(time_sec=cur_time)
                 logger.debug(f"A response has been received from API for the timestamp: {cur_time}")
-
-                quantity = len(states)
-                if quantity != 0:
-                    aircraft_states = []
-                    for state in states:
-                        aircraft_states.append(StateVector(**state))
-
-                    db.insert_current_states(aircraft_states)
+                db.insert_current_states(states)
 
     except Exception as e:
         logger.exception(f"Exception: {e}")
 
 
-def update_flight_paths() -> None:
+def update_trajectories() -> None:
     try:
-        with closing(DB(**common_conf.db_params)) as db:
-            with db:
-                logger.info("Starting flight paths update")
-                db.update_paths()
+        logger.info("Starting flight paths update")
+        update_flight_paths()
     except Exception as e:
         logger.exception(f"Exception: {e}")
 
@@ -78,7 +70,7 @@ def insert_states(self) -> None:
 @app.task(bind=True)
 def update_paths(self) -> None:
     self.time_limit = 10
-    update_flight_paths()
+    update_trajectories()
 
 
 @app.task(bind=True)
