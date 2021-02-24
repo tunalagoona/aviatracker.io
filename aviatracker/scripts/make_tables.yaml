@@ -1,5 +1,5 @@
 current_states:
-  '
+  "
     CREATE TABLE IF NOT EXISTS current_states (
       request_time INTEGER,
       icao24 VARCHAR PRIMARY KEY,
@@ -20,10 +20,10 @@ current_states:
       spi BOOLEAN,
       position_source INTEGER
     );
-  '
+  "
 
 flight_paths:
-  '
+  "
     CREATE TABLE IF NOT EXISTS flight_paths (
       path_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       last_update INTEGER,
@@ -38,17 +38,26 @@ flight_paths:
       finished_at INTEGER,
       UNIQUE (last_update, icao24)
     );
-  '
+  "
 
+callsign_memo:
+  "
+    CREATE TABLE IF NOT EXISTS callsign_memo (
+      callsign_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      callsign VARCHAR UNIQUE,
+      est_departure_airport VARCHAR,
+      est_arrival_airport VARCHAR
+    );
+  "
 airport_stats_last_update:
-  '
+  "
     CREATE TABLE IF NOT EXISTS airport_stats_last_update (
       update_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       last_stats_update_time INTEGER,
-  '
+  "
 
 airport_stats:
-  '
+  "
     CREATE TABLE IF NOT EXISTS airport_stats (
       record_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       airport_icao VARCHAR,
@@ -57,10 +66,10 @@ airport_stats:
       airplane_quantity_departures INTEGER,
       UNIQUE (airport_icao, date)
     );
-  '
+  "
 
 airports:
-  '
+  "
     CREATE TABLE IF NOT EXISTS airports (
       airport_id INTEGER PRIMARY KEY,
       name VARCHAR,
@@ -77,4 +86,4 @@ airports:
       type VARCHAR,
       source VARCHAR
     );
-  '
+  "
