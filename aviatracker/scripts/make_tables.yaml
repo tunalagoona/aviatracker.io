@@ -28,11 +28,9 @@ flight_paths:
       path_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       last_update INTEGER,
       icao24 VARCHAR,
+      callsign VARCHAR,
       departure_airport_icao VARCHAR,
       arrival_airport_icao VARCHAR,
-      arrival_airport_long DOUBLE PRECISION,
-      arrival_airport_lat DOUBLE PRECISION,
-      estimated_arrival_time INTEGER,
       path JSONB,
       finished BOOLEAN,
       finished_at INTEGER,
@@ -45,8 +43,9 @@ callsign_memo:
     CREATE TABLE IF NOT EXISTS callsign_memo (
       callsign_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       callsign VARCHAR UNIQUE,
+      est_arrival_airport VARCHAR,
       est_departure_airport VARCHAR,
-      est_arrival_airport VARCHAR
+      UNIQUE (callsign, est_arrival_airport, est_departure_airport)
     );
   "
 airport_stats_last_update:
