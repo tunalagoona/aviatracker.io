@@ -61,26 +61,3 @@ class OpenskyStates(object):
         if resp is not None:
             flights = [OpenskyFlight(*x) for x in resp]
             return flights
-
-    # def get_airports(self, begin: int, end: int) -> List[FlightAirportInfo]:
-    #     parameters = {"begin": begin, "end": end}
-    #     operation = "/flights/all"
-    #     resp = self.get_from_opensky(parameters, operation)
-    #
-    #     flight_airports = []
-    #
-    #     attempts = 3
-    #     if resp is None:
-    #         while attempts > 0 and resp is None:
-    #             logger.info("One more try")
-    #             resp = self.get_from_opensky(parameters, operation)
-    #             attempts -= 1
-    #
-    #     for flight in resp:
-    #         icao24 = flight["icao24"]
-    #         dept_airport = flight["estDepartureAirport"]
-    #         arrv_airport = flight["estArrivalAirport"]
-    #         est_arr_time = flight["lastSeen"]
-    #         flight_airports.append(FlightAirportInfo(*[icao24, dept_airport, arrv_airport, est_arr_time]))
-    #
-    #     return flight_airports
