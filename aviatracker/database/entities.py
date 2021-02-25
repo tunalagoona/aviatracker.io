@@ -78,3 +78,12 @@ AirportStats = namedtuple(
         "airplane_quantity_departures"
     ]
 )
+
+CallsignMemo = namedtuple(
+    "CallsignMemo",
+    [
+        "callsign",
+        "arrival_airport",
+        "departure_airport"
+    ]
+)
