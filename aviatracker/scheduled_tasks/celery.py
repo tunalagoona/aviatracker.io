@@ -21,7 +21,7 @@ app.conf.beat_schedule = {
     },
     "every-2-days-update-callsigns": {
         "task": "aviatracker.scheduled_tasks.tasks.update_callsigns",
-        "schedule": 172800,
+        "schedule": 86400,
         "args": (),
     },
     # "every-hour-update-stats": {
