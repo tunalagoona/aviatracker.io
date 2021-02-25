@@ -8,7 +8,7 @@ from celery.signals import after_setup_task_logger
 from celery.utils.log import get_task_logger
 
 from aviatracker.config import common_conf
-from aviatracker.database import DB, StateVector
+from aviatracker.database import DB, StateVector, OpenskyFlight
 from aviatracker.opensky import OpenskyStates
 from aviatracker.scheduled_tasks.celery import app
 from aviatracker.core import update_flight_paths
@@ -44,14 +44,29 @@ def update_trajectories() -> None:
         logger.exception(f"Exception: {e}")
 
 
-def update_airport_stats() -> None:
-    try:
-        with closing(DB(**common_conf.db_params)) as db:
-            with db:
-                logger.info("Starting airports statistics update")
-                db.update_airport_stats()
-    except Exception as e:
-        logger.exception(f"Exception: {e}")
+@app.task(bind=True)
+def update_callsigns() -> None:
+    api = OpenskyStates()
+    flights: List[OpenskyFlight] = api.get_callsigns_history()
+
+    with closing(DB(**common_conf.db_params)) as db:
+        with db:
+            for flight in flights:
+                db.update_callsigns(
+                    flight["callsign"],
+                    flight["estArrivalAirport"],
+                    flight["estDepartureAirport"]
+                )
+
+
+# def update_airport_stats() -> None:
+#     try:
+#         with closing(DB(**common_conf.db_params)) as db:
+#             with db:
+#                 logger.info("Starting airports statistics update")
+#                 db.update_airport_stats()
+#     except Exception as e:
+#         logger.exception(f"Exception: {e}")
 
 
 @app.task(bind=True)
@@ -72,8 +87,8 @@ def update_paths(self) -> None:
     self.time_limit = 10
     update_trajectories()
 
-
-@app.task(bind=True)
-def update_stats(self) -> None:
-    self.time_limit = 10
-    update_airport_stats()
+#
+# @app.task(bind=True)
+# def update_stats(self) -> None:
+#     self.time_limit = 10
+#     update_airport_stats()
