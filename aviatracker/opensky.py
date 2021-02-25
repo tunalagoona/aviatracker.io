@@ -2,11 +2,12 @@ import json
 import logging
 import socket
 from typing import Dict, List, Optional
+import time
 
-from requests import exceptions, get
+from requests import exceptions, get, codes
 
 from aviatracker.config import common_conf
-from aviatracker.database import FlightAirportInfo, StateVector
+from aviatracker.database import FlightAirportInfo, StateVector, OpenskyFlight
 
 logger = logging.getLogger()
 
@@ -26,7 +27,7 @@ class OpenskyStates(object):
                 params=params,  # type: ignore
                 timeout=15,
             )
-            if r.status_code == 200:
+            if r.status_code == codes.ok:
                 logger.debug("Successful connection to Opensky API.")
                 response = json.loads(r.text)
                 return response
@@ -36,28 +37,50 @@ class OpenskyStates(object):
         except (OSError, exceptions.ReadTimeout, socket.timeout) as e:
             logger.error(f"Could not get states from API: {e}")
 
-    def get_current_states(self, time_sec: int = 0, icao24: str = None) -> List[StateVector]:
+    def get_current_states(self, time_sec: int = 0, icao24: str = None) -> Optional[List[StateVector]]:
         parameters = {"time": int(time_sec), "icao24": icao24}
         operation = "/states/all"
-        resp = self.get_from_opensky(parameters, operation)
 
-        request_time = resp["time"]
-        dirty_states = resp["states"]
-        states = [dict(StateVector(*([request_time] + state))) for state in dirty_states]
+        resp: Dict = self.get_from_opensky(parameters, operation)
 
-        return states
+        if resp is not None:
+            request_time = resp["time"]
+            dirty_states = resp["states"]
+            states = [StateVector(*([request_time] + state)) for state in dirty_states]
+            return states
 
-    def get_airports(self, begin: int, end: int) -> List[FlightAirportInfo]:
+    def get_callsigns_history(self) -> List[OpenskyFlight]:
+        """Get flights history for an hour interval 2 days ago"""
+        begin = time.time() - 172800
+        end = begin + 3600
         parameters = {"begin": begin, "end": end}
         operation = "/flights/all"
-        resp = self.get_from_opensky(parameters, operation)
 
-        flight_airports = []
-        for flight in resp:
-            icao24 = flight["icao24"]
-            dept_airport = flight["estDepartureAirport"]
-            arrv_airport = flight["estArrivalAirport"]
-            est_arr_time = flight["lastSeen"]
-            flight_airports.append(FlightAirportInfo(*[icao24, dept_airport, arrv_airport, est_arr_time]))
+        resp: Dict = self.get_from_opensky(parameters, operation)
 
-        return flight_airports
+        if resp is not None:
+            flights = [OpenskyFlight(*x) for x in resp]
+            return flights
+
+    # def get_airports(self, begin: int, end: int) -> List[FlightAirportInfo]:
+    #     parameters = {"begin": begin, "end": end}
+    #     operation = "/flights/all"
+    #     resp = self.get_from_opensky(parameters, operation)
+    #
+    #     flight_airports = []
+    #
+    #     attempts = 3
+    #     if resp is None:
+    #         while attempts > 0 and resp is None:
+    #             logger.info("One more try")
+    #             resp = self.get_from_opensky(parameters, operation)
+    #             attempts -= 1
+    #
+    #     for flight in resp:
+    #         icao24 = flight["icao24"]
+    #         dept_airport = flight["estDepartureAirport"]
+    #         arrv_airport = flight["estArrivalAirport"]
+    #         est_arr_time = flight["lastSeen"]
+    #         flight_airports.append(FlightAirportInfo(*[icao24, dept_airport, arrv_airport, est_arr_time]))
+    #
+    #     return flight_airports
