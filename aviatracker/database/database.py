@@ -14,9 +14,9 @@ from aviatracker.database import (
     FlightAirportInfo,
     FlightPath,
     StateVector,
-)
+    OpenskyFlight)
 
-from aviatracker.opensky import OpenskyStates
+from aviatracker.opensky import Opensky
 
 logger = logging.getLogger()
 
@@ -105,7 +105,16 @@ class DB:
                 f"AND %s - last_update > 1800", (time_now, time_now)
             )
 
-    def update_callsigns(self, callsign, arrival_airport, departure_airport):
+    def upsert_callsigns(self, flights: List[OpenskyFlight]) -> None:
+        for flight in flights:
+            if flight.callsign:
+                self.upsert_one_callsign(
+                    flight.callsign.strip().upper(),
+                    flight.estArrivalAirport,
+                    flight.estDepartureAirport
+                )
+
+    def upsert_one_callsign(self, callsign, arrival_airport, departure_airport):
         with self.conn.cursor() as curs:
             curs.execute(
                 f"SELECT * FROM callsign_memo WHERE callsign = %s", (callsign,)
@@ -189,45 +198,71 @@ class DB:
                 "WHERE now() - date > interval '1 month' "
             )
 
-    # def update_stats_for_one_airport(self, airport_icao: str, last_update: int, is_arrival: bool) -> None:
-    #     update_day = datetime.fromtimestamp(last_update).strftime('%Y-%m-%d')
-    #
-    #     if is_arrival:
-    #         new_arrivals, new_departures = 1, 0
-    #     else:
-    #         new_arrivals, new_departures = 0, 1
-    #
-    #     with self.conn.cursor() as curs:
-    #         curs.execute(
-    #             "SELECT * FROM airport_stats WHERE airport_icao = %s AND date = %s",
-    #             (airport_icao, update_day)
-    #         )
-    #         stats = curs.fetchone()
-    #         if stats:
-    #             stats = AirportStats(*stats)
-    #
-    #             curs.execute(
-    #                 "UPDATE airport_stats"
-    #                 "SET airplane_quantity_arrivals = airplane_quantity_arrivals + 1"
-    #                 "WHERE airport_icao = (%s) AND date_today = (%s)",
-    #                 (stats["airport_icao"], stats["date"]),
-    #             )
-    #             logger.debug("Updated statistics record for an airport")
-    #         else:
-    #             new_stats = AirportStats(
-    #                 airport_icao=airport_icao,
-    #                 date=today,
-    #                 airplane_quantity_arrivals=new_arrivals,
-    #                 airplane_quantity_departures=new_departures,
-    #             )
-    #
-    #             columns_str, values_str = column_value_to_str(new_stats._fields)
-    #             curs.execute(
-    #                 f"INSERT INTO airport_stats ({columns_str})" f"VALUES ({values_str})",
-    #                 new_stats,
-    #             )
-    #             logger.debug("Added new statistics record for an airport")
-    #
+    def update_stats_for_arrival_airport(self, airport: str, day: str) -> None:
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "UPDATE airport_stats"
+                "SET airplane_quantity_arrivals = airplane_quantity_arrivals + 1"
+                "WHERE airport_icao = (%s) AND date_today = (%s)",
+                (airport, day),
+            )
+
+    def update_stats_for_departure_airport(self, airport: str, day: str) -> None:
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "UPDATE airport_stats"
+                "SET airplane_quantity_departures = airplane_quantity_departures + 1"
+                "WHERE airport_icao = (%s) AND date_today = (%s)",
+                (airport, day),
+            )
+
+    def get_stats_for_airport(self, airport: str, update_day: str) -> Optional[AirportStats]:
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "SELECT * FROM airport_stats WHERE airport_icao = %s AND date = %s",
+                (airport, update_day)
+            )
+            stats = curs.fetchone()
+            if stats:
+                stats = AirportStats(*stats)
+                return stats
+            return None
+
+    def insert_arrival_airport_stats(self, airport_icao, day):
+        with self.conn.cursor() as curs:
+            new_stats = AirportStats(
+                airport_icao=airport_icao,
+                date=day,
+                airplane_quantity_arrivals=1,
+                airplane_quantity_departures=0,
+            )
+
+            columns_str, values_str = column_value_to_str(new_stats._fields)
+            curs.execute(
+                f"INSERT INTO airport_stats ({columns_str})" f"VALUES ({values_str})",
+                new_stats,
+            )
+
+    def insert_departure_airport_stats(self, airport_icao, day):
+        with self.conn.cursor() as curs:
+            new_stats = AirportStats(
+                airport_icao=airport_icao,
+                date=day,
+                airplane_quantity_arrivals=0,
+                airplane_quantity_departures=1,
+            )
+
+            columns_str, values_str = column_value_to_str(new_stats._fields)
+            curs.execute(
+                f"INSERT INTO airport_stats ({columns_str})" f"VALUES ({values_str})",
+                new_stats,
+            )
+
+    def update_airport_stats_last_update(self, last_update):
+        with self.conn.cursor() as curs:
+            curs.execute(
+                f"INSERT INTO airport_stats_last_update (last_stats_update_time) VALUES (%s)", (last_update,)
+            )
 
     def get_stats_last_update(self) -> int:
         with self.conn.cursor() as curs:
