@@ -29,11 +29,9 @@ FlightPath = namedtuple(
     [
         "last_update",
         "icao24",
+        "callsign",
         "departure_airport_icao",
         "arrival_airport_icao",
-        "arrival_airport_long",
-        "arrival_airport_lat",
-        "estimated_arrival_time",
         "path",
         "finished",
         "finished_at"
@@ -85,5 +83,23 @@ CallsignMemo = namedtuple(
         "callsign",
         "arrival_airport",
         "departure_airport"
+    ]
+)
+
+OpenskyFlight = namedtuple(
+    "OpenskyFlight",
+    [
+        "icao24",
+        "firstSeen",
+        "estDepartureAirport",
+        "lastSeen",
+        "estArrivalAirport",
+        "callsign",
+        "estDepartureAirportHorizDistance",
+        "estDepartureAirportVertDistance",
+        "estArrivalAirportHorizDistance",
+        "estArrivalAirportVertDistance",
+        "departureAirportCandidatesCount",
+        "arrivalAirportCandidatesCount"
     ]
 )
