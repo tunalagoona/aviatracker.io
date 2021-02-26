@@ -1,5 +1,7 @@
 import json
+import logging
 from contextlib import closing
+from datetime import datetime
 from typing import List, Optional, Dict
 
 from aviatracker.database import DB
@@ -7,8 +9,11 @@ from aviatracker.config import common_conf
 from aviatracker.database import FlightPath
 
 
+logger = logging.getLogger()
+params = common_conf.db_params
+
+
 def update_flight_paths():
-    params = common_conf.db_params
     with closing(DB(**params)) as db:
         with db:
             db.delete_outdated_paths()
@@ -28,11 +33,19 @@ def update_flight_paths():
                         "longitude": state["longitude"],
                         "latitude": state["latitude"],
                     }
-                    path = [json.dumps(current_location)]
+                    path: str = json.dumps(current_location)
 
-                    if len(unfinished_path) == 0:
-                        arrival_airport_icao, departure_airport_icao = db.get_airports_for_callsign(callsign)
+                    airports = db.get_airports_for_callsign(callsign)
+                    if airports:
+                        arrival_airport_icao, departure_airport_icao = airports
+                    else:
+                        arrival_airport_icao, departure_airport_icao = None, None
 
+                    if unfinished_path:
+                        last_update = unfinished_path.last_update
+                        db.update_unfinished_path(icao, last_update, path, update_time,
+                                                  arrival_airport_icao, departure_airport_icao)
+                    else:
                         new_path = FlightPath(
                             last_update=update_time,
                             icao24=icao,
@@ -45,6 +58,37 @@ def update_flight_paths():
                         )
 
                         db.insert_path(new_path)
-                    else:
-                        last_update = unfinished_path["last_update"]
-                        db.update_unfinished_path(icao, last_update, path, update_time)
+
+
+def update_airport_stats():
+    with closing(DB(**params)) as db:
+        with db:
+            db.delete_outdated_stats()
+
+            last_update: int = db.get_stats_last_update()
+            not_considered_paths = db.get_not_considered_paths(last_update)
+
+            max_update = 0
+
+            for path in not_considered_paths:
+                path = FlightPath(*path)
+                update = path.last_update
+                update_day = datetime.utcfromtimestamp(update).strftime('%Y-%m-%d')
+
+                arrival_airport = path.arrival_airport_icao
+                arr_stats = db.get_stats_for_airport(arrival_airport, update_day)
+                if arr_stats:
+                    db.update_stats_for_arrival_airport(arrival_airport, update_day)
+                else:
+                    db.insert_arrival_airport_stats(arrival_airport, update_day)
+
+                departure_airport = path.departure_airport_icao
+                dep_stats = db.get_stats_for_airport(departure_airport, update_day)
+                if dep_stats:
+                    db.update_stats_for_departure_airport(departure_airport, update_day)
+                else:
+                    db.insert_departure_airport_stats(departure_airport, update_day)
+                if update > max_update:
+                    max_update = update
+
+            db.update_airport_stats_last_update(max_update)
