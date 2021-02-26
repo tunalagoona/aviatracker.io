@@ -12,7 +12,7 @@ from aviatracker.database import FlightAirportInfo, StateVector, OpenskyFlight
 logger = logging.getLogger()
 
 
-class OpenskyStates(object):
+class Opensky(object):
     def __init__(self, username: Optional = None, password: Optional = None) -> None:
         if username is None or password is None:
             username, password = common_conf.opensky_user, common_conf.opensky_pass
@@ -25,7 +25,7 @@ class OpenskyStates(object):
                 "{}{}".format(self.api_url, operation),
                 auth=self.auth,
                 params=params,  # type: ignore
-                timeout=15,
+                timeout=20,
             )
             if r.status_code == codes.ok:
                 logger.debug("Successful connection to Opensky API.")
@@ -35,7 +35,7 @@ class OpenskyStates(object):
                 logger.error(f"Could not connect to Opensky API. Status code is {r.status_code}.")
 
         except (OSError, exceptions.ReadTimeout, socket.timeout) as e:
-            logger.error(f"Could not get states from API: {e}")
+            logger.error(f"Could not get data from API {operation} endpoint: {e}. ")
 
     def get_current_states(self, time_sec: int = 0, icao24: str = None) -> Optional[List[StateVector]]:
         parameters = {"time": int(time_sec), "icao24": icao24}
@@ -49,15 +49,14 @@ class OpenskyStates(object):
             states = [StateVector(*([request_time] + state)) for state in dirty_states]
             return states
 
-    def get_callsigns_history(self) -> List[OpenskyFlight]:
-        """Get flights history for an hour interval 2 days ago"""
-        begin = time.time() - 172800
-        end = begin + 3600
+    def get_flights_for_period(self, begin, period=3600) -> List[OpenskyFlight]:
+        """Gets flights history for an hour interval"""
+        end = begin + period
         parameters = {"begin": begin, "end": end}
         operation = "/flights/all"
 
         resp: Dict = self.get_from_opensky(parameters, operation)
 
         if resp is not None:
-            flights = [OpenskyFlight(*x) for x in resp]
+            flights = [OpenskyFlight(**x) for x in resp]
             return flights
