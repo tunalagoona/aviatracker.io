@@ -1,7 +1,7 @@
 import sys
 import time
 from contextlib import closing
-from typing import Dict, List
+from typing import List
 
 from celery.app.log import TaskFormatter
 from celery.signals import after_setup_task_logger
@@ -9,9 +9,9 @@ from celery.utils.log import get_task_logger
 
 from aviatracker.config import common_conf
 from aviatracker.database import DB, StateVector, OpenskyFlight
-from aviatracker.opensky import OpenskyStates
+from aviatracker.opensky import Opensky
 from aviatracker.scheduled_tasks.celery import app
-from aviatracker.core import update_flight_paths
+from aviatracker.core import update_flight_paths, update_airport_stats
 
 logger = get_task_logger(__name__)
 
@@ -26,20 +26,14 @@ def setup_task_logger(logger, **kwargs) -> None:
 def update_callsigns(self) -> None:
     logger.debug("Starting task update_callsigns")
     self.time_limit = 15
-    api = OpenskyStates()
-    flights: List[OpenskyFlight] = api.get_callsigns_history()
+    api = Opensky()
+    flights: List[OpenskyFlight] = api.get_flights_for_period(time.time() - 86400)
 
     if flights:
-        logger.debug(f"_____Received {len(flights)} Flights!!!!_______")
+        logger.debug(f"Received {len(flights)} flights")
         with closing(DB(**common_conf.db_params)) as db:
             with db:
-                for flight in flights:
-                    if flight.callsign:
-                        db.update_callsigns(
-                            flight.callsign.strip().upper(),
-                            flight.estArrivalAirport,
-                            flight.estDepartureAirport
-                        )
+                db.upsert_callsigns(flights)
 
 
 @app.task(bind=True)
@@ -48,7 +42,7 @@ def insert_states(self) -> None:
     logger.debug("Starting task insert_states")
     cur_time = int(time.time())
 
-    api = OpenskyStates()
+    api = Opensky()
     try:
         with closing(DB(**common_conf.db_params)) as db:
             with db:
@@ -81,17 +75,13 @@ def update_paths(self) -> None:
         logger.exception(f"Exception: {e}")
 
 
-# def update_airport_stats() -> None:
-#     try:
-#         with closing(DB(**common_conf.db_params)) as db:
-#             with db:
-#                 logger.info("Starting airports statistics update")
-#                 db.update_airport_stats()
-#     except Exception as e:
-#         logger.exception(f"Exception: {e}")
-#
-
-# @app.task(bind=True)
-# def update_stats(self) -> None:
-#     self.time_limit = 10
-#     update_airport_stats()
+@app.task(bind=True)
+def update_stats(self) -> None:
+    self.time_limit = 10
+    try:
+        with closing(DB(**common_conf.db_params)) as db:
+            with db:
+                logger.info("Starting airports statistics update")
+                update_airport_stats()
+    except Exception as e:
+        logger.exception(f"Exception: {e}")

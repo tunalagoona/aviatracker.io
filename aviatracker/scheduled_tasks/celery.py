@@ -19,14 +19,14 @@ app.conf.beat_schedule = {
         "schedule": 20.0,
         "args": (),
     },
-    "every-2-days-update-callsigns": {
+    "every-23-hours-update-callsigns": {
         "task": "aviatracker.scheduled_tasks.tasks.update_callsigns",
-        "schedule": 86400,
+        "schedule": 900,
         "args": (),
     },
-    # "every-hour-update-stats": {
-    #     "task": "aviatracker.scheduled_tasks.tasks.update_stats",
-    #     "schedule": 3600.0,
-    #     "args": (),
-    # },
+    "every-hour-update-stats": {
+        "task": "aviatracker.scheduled_tasks.tasks.update_stats",
+        "schedule": 3600.0,
+        "args": (),
+    },
 }
