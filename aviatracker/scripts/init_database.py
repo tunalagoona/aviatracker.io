@@ -1,16 +1,18 @@
 import os
 from contextlib import closing
+import time
+from typing import List
 
 import click
 import yaml
 
 from aviatracker.config import common_conf
-from aviatracker.database import Airport
-from aviatracker.database.database import DB
+from aviatracker.database import DB, Airport, OpenskyFlight
+from aviatracker.opensky import Opensky
 
 
 @click.command(name="make-tables")
-def make_tables():
+def make_tables() -> None:
     path = os.path.join(os.path.dirname(__file__), "make_tables.yaml")
 
     with closing(DB(**common_conf.db_params)) as db:
@@ -36,6 +38,23 @@ def fill_airports(file: str) -> None:
     with closing(DB(**common_conf.db_params)) as db:
         with db:
             db.insert_airports(airports)
+
+
+@click.command(name="fill_callsigns")
+def fill_callsigns() -> None:
+    """Fill callsigns for the period [yesterday - 2 weeks, yesterday].
+    There is a delay of when finished flights appear in /flights/all"""
+    api = Opensky()
+    with closing(DB(**common_conf.db_params)) as db:
+        with db:
+            yesterday = int(time.time()) - 86400  # 1 day ago
+            begin = yesterday - 1209600  # 2 weeks + 1 day ago
+
+            while begin < yesterday:
+                flights: List[OpenskyFlight] = api.get_flights_for_period(begin)
+                db.upsert_callsigns(flights)
+                begin += 3600
+                time.sleep(30)
 
 
 @click.group()

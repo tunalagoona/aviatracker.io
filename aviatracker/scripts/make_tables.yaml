@@ -52,7 +52,8 @@ airport_stats_last_update:
   "
     CREATE TABLE IF NOT EXISTS airport_stats_last_update (
       update_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-      last_stats_update_time INTEGER,
+      last_stats_update_time INTEGER
+    );
   "
 
 airport_stats:
