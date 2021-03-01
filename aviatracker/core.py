@@ -67,29 +67,36 @@ def update_airport_stats():
             db.delete_outdated_stats()
 
             last_update: int = db.get_stats_last_update()
+            logger.info(f"_______________________STATS last_update: {last_update}")
+
             not_considered_paths = db.get_not_considered_paths(last_update)
+            logger.info(f"Quantity of not considered in stats calculation paths: {len(not_considered_paths)}")
 
             max_update = 0
 
             for path in not_considered_paths:
-                path = FlightPath(*path)
+                path = FlightPath(*path[1:])
                 update = path.last_update
                 update_day = datetime.utcfromtimestamp(update).strftime('%Y-%m-%d')
 
                 arrival_airport = path.arrival_airport_icao
-                arr_stats = db.get_stats_for_airport(arrival_airport, update_day)
-                if arr_stats:
-                    db.update_stats_for_arrival_airport(arrival_airport, update_day)
-                else:
-                    db.insert_arrival_airport_stats(arrival_airport, update_day)
+                if arrival_airport:
+                    arr_stats = db.get_stats_for_airport(arrival_airport, update_day)
+                    if arr_stats:
+                        db.update_stats_for_arrival_airport(arrival_airport, update_day)
+                    else:
+                        db.insert_arrival_airport_stats(arrival_airport, update_day)
 
                 departure_airport = path.departure_airport_icao
-                dep_stats = db.get_stats_for_airport(departure_airport, update_day)
-                if dep_stats:
-                    db.update_stats_for_departure_airport(departure_airport, update_day)
-                else:
-                    db.insert_departure_airport_stats(departure_airport, update_day)
+                if departure_airport:
+                    dep_stats = db.get_stats_for_airport(departure_airport, update_day)
+                    if dep_stats:
+                        db.update_stats_for_departure_airport(departure_airport, update_day)
+                    else:
+                        db.insert_departure_airport_stats(departure_airport, update_day)
+
                 if update > max_update:
                     max_update = update
 
-            db.update_airport_stats_last_update(max_update)
+            if max_update != 0:
+                db.update_airport_stats_last_update(max_update)

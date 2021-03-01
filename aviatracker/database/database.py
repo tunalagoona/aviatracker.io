@@ -197,36 +197,36 @@ class DB:
         with self.conn.cursor() as curs:
             curs.execute(
                 "DELETE FROM airport_stats "
-                "WHERE now() - date > interval '1 month' "
+                "WHERE now() - the_date > interval '1 month' "
             )
 
     def update_stats_for_arrival_airport(self, airport: str, day: str) -> None:
         with self.conn.cursor() as curs:
             curs.execute(
-                "UPDATE airport_stats"
+                "UPDATE airport_stats "
                 "SET airplane_quantity_arrivals = airplane_quantity_arrivals + 1"
-                "WHERE airport_icao = (%s) AND date_today = (%s)",
+                "WHERE airport_icao = %s AND the_date = %s",
                 (airport, day),
             )
 
     def update_stats_for_departure_airport(self, airport: str, day: str) -> None:
         with self.conn.cursor() as curs:
             curs.execute(
-                "UPDATE airport_stats"
+                "UPDATE airport_stats "
                 "SET airplane_quantity_departures = airplane_quantity_departures + 1"
-                "WHERE airport_icao = (%s) AND date_today = (%s)",
+                "WHERE airport_icao = %s AND the_date = %s",
                 (airport, day),
             )
 
     def get_stats_for_airport(self, airport: str, update_day: str) -> Optional[AirportStats]:
         with self.conn.cursor() as curs:
             curs.execute(
-                "SELECT * FROM airport_stats WHERE airport_icao = %s AND date = %s",
+                "SELECT * FROM airport_stats WHERE airport_icao = %s AND the_date = %s",
                 (airport, update_day)
             )
             stats = curs.fetchone()
             if stats:
-                stats = AirportStats(*stats)
+                stats = AirportStats(*stats[1:])
                 return stats
             return None
 
@@ -234,30 +234,32 @@ class DB:
         with self.conn.cursor() as curs:
             new_stats = AirportStats(
                 airport_icao=airport_icao,
-                date=day,
+                the_date=day,
                 airplane_quantity_arrivals=1,
                 airplane_quantity_departures=0,
             )
+            stats = new_stats._asdict()
 
             columns_str, values_str = column_value_to_str(new_stats._fields)
             curs.execute(
                 f"INSERT INTO airport_stats ({columns_str})" f"VALUES ({values_str})",
-                new_stats,
+                stats,
             )
 
     def insert_departure_airport_stats(self, airport_icao, day):
         with self.conn.cursor() as curs:
             new_stats = AirportStats(
                 airport_icao=airport_icao,
-                date=day,
+                the_date=day,
                 airplane_quantity_arrivals=0,
                 airplane_quantity_departures=1,
             )
+            stats = new_stats._asdict()
 
             columns_str, values_str = column_value_to_str(new_stats._fields)
             curs.execute(
                 f"INSERT INTO airport_stats ({columns_str})" f"VALUES ({values_str})",
-                new_stats,
+                stats,
             )
 
     def update_airport_stats_last_update(self, last_update):
@@ -272,7 +274,10 @@ class DB:
                 "SELECT MAX(last_stats_update_time) FROM airport_stats_last_update;"
             )
             last_update = curs.fetchone()[0]
-            return last_update
+            if last_update:
+                return last_update
+            else:
+                return 0
 
     def get_not_considered_paths(self, last_update) -> List[Tuple]:
         with self.conn.cursor() as curs:
