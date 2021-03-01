@@ -46,6 +46,7 @@ def update_flight_paths():
                         db.update_unfinished_path(icao, last_update, path, update_time,
                                                   arrival_airport_icao, departure_airport_icao)
                     else:
+                        path = json.dumps([current_location])
                         new_path = FlightPath(
                             last_update=update_time,
                             icao24=icao,

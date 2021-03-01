@@ -63,7 +63,8 @@ class DB:
                 row: Dict = state._asdict()
 
                 curs.execute(
-                    f"INSERT INTO current_states ({columns_str}) VALUES ({values_str})",
+                    f"INSERT INTO current_states ({columns_str}) VALUES ({values_str}) "
+                    f"ON CONFLICT DO NOTHING",
                     row,
                 )
             logger.debug(f"Inserted {len(aircraft_states)} aircraft states for the timestamp {resp_time}")
@@ -75,7 +76,7 @@ class DB:
             states = []
             if len(aircraft_states) != 0:
                 for state in aircraft_states:
-                    states.append(StateVector(*state)._asdict())
+                    states.append(StateVector(*state[1:])._asdict())
             return states
 
     def insert_path(self, path: FlightPath) -> None:
@@ -178,14 +179,15 @@ class DB:
         with self.conn.cursor() as curs:
             if arr_airp is None and dep_airp is None:
                 curs.execute(
-                    "UPDATE flight_paths SET path = path || %s::jsonb, last_update = %s "
+                    "UPDATE flight_paths "
+                    "SET path = path::jsonb || %s::jsonb, last_update = %s "
                     "WHERE icao24 = %s AND last_update = %s",
                     (path_travelled, new_last_update, icao, old_last_update)
                 )
             else:
                 curs.execute(
                     "UPDATE flight_paths "
-                    "SET path = path || %s::jsonb, last_update = %s, "
+                    "SET path = path::jsonb || %s::jsonb, last_update = %s, "
                     "departure_airport_icao = %s, arrival_airport_icao = %s "
                     "WHERE icao24 = %s AND last_update = %s",
                     (path_travelled, new_last_update, dep_airp, arr_airp, icao, old_last_update)
