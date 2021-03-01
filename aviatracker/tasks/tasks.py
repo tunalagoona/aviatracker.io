@@ -10,7 +10,7 @@ from celery.utils.log import get_task_logger
 from aviatracker.config import common_conf
 from aviatracker.database import DB, StateVector, OpenskyFlight
 from aviatracker.opensky import Opensky
-from aviatracker.scheduled_tasks.celery import app
+from aviatracker.tasks.celery import app
 from aviatracker.core import update_flight_paths, update_airport_stats
 
 logger = get_task_logger(__name__)
