@@ -58,6 +58,8 @@ class DB:
 
             resp_time: int = getattr(aircraft_states[0], "request_time")
 
+            # aircraft_states = sorted(aircraft_states, key=lambda k: k.icao24)
+
             for state in aircraft_states:
                 columns_str, values_str = column_value_to_str(state._fields)
                 row: Dict = state._asdict()

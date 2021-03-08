@@ -71,7 +71,7 @@ AirportStats = namedtuple(
     "AirportStats",
     [
         "airport_icao",
-        "date",
+        "the_date",
         "airplane_quantity_arrivals",
         "airplane_quantity_departures"
     ]
