@@ -46,8 +46,9 @@ class Opensky(object):
         if resp is not None:
             request_time = resp["time"]
             dirty_states = resp["states"]
-            states = [StateVector(*([request_time] + state)) for state in dirty_states]
-            return states
+            if dirty_states:
+                states = [StateVector(*([request_time] + state)) for state in dirty_states]
+                return states
 
     def get_flights_for_period(self, begin, period=3600) -> List[OpenskyFlight]:
         """Gets flights history for an hour interval"""

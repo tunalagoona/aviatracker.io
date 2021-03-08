@@ -1,8 +1,9 @@
 current_states:
   "
     CREATE TABLE IF NOT EXISTS current_states (
+      state_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       request_time INTEGER,
-      icao24 VARCHAR PRIMARY KEY,
+      icao24 VARCHAR UNIQUE,
       callsign VARCHAR,
       origin_country VARCHAR,
       time_position INTEGER,
@@ -61,10 +62,10 @@ airport_stats:
     CREATE TABLE IF NOT EXISTS airport_stats (
       record_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       airport_icao VARCHAR,
-      date DATE,
+      the_date DATE,
       airplane_quantity_arrivals INTEGER,
       airplane_quantity_departures INTEGER,
-      UNIQUE (airport_icao, date)
+      UNIQUE (airport_icao, the_date)
     );
   "
 

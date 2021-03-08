@@ -18,10 +18,12 @@ def update_flight_paths():
         with db:
             db.delete_outdated_paths()
             db.update_path_when_finished()
-
+        with db:
             states: Optional[List[Dict]] = db.get_current_states()
 
             if len(states) > 0:
+                """Ordering of the data helps to avoid deadLocks on path updates."""
+                states = sorted(states, key=lambda k: k['icao24'])
                 for state in states:
                     icao = state["icao24"]
                     callsign = state["callsign"]
@@ -67,10 +69,9 @@ def update_airport_stats():
             db.delete_outdated_stats()
 
             last_update: int = db.get_stats_last_update()
-            logger.info(f"_______________________STATS last_update: {last_update}")
 
             not_considered_paths = db.get_not_considered_paths(last_update)
-            logger.info(f"Quantity of not considered in stats calculation paths: {len(not_considered_paths)}")
+            logger.debug(f"Quantity of not considered in stats calculation paths: {len(not_considered_paths)}")
 
             max_update = 0
 

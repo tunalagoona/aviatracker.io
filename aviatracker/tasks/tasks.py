@@ -44,13 +44,13 @@ def insert_states(self) -> None:
 
     api = Opensky()
     try:
-        with closing(DB(**common_conf.db_params)) as db:
-            with db:
-                logger.debug(f"A request has been sent to API for the timestamp: {cur_time}")
-                states: List[StateVector] or None = api.get_current_states(time_sec=cur_time)
-                logger.debug(f"A response has been received from API for the timestamp: {cur_time}")
-                if states:
-                    logger.debug(f"received {len(states)} states")
+        logger.debug(f"A request has been sent to API for the timestamp: {cur_time}")
+        states: List[StateVector] or None = api.get_current_states(time_sec=cur_time)
+        logger.debug(f"A response has been received from API for the timestamp: {cur_time}")
+        if states:
+            logger.debug(f"received {len(states)} states")
+            with closing(DB(**common_conf.db_params)) as db:
+                with db:
                     db.insert_current_states(states)
 
     except Exception as e:
