@@ -158,13 +158,13 @@ class DB:
                 path = FlightPath(*record)
                 return path
 
-    def get_airport_long_lat(self, airport_icao: str) -> Tuple[float, float]:
-        with self.conn.cursor() as curs:
-            curs.execute(
-                "SELECT longitude, latitude FROM airports WHERE icao = %s", (airport_icao,)
-            )
-            longitude, latitude = curs.fetchone()
-        return longitude, latitude
+    # def get_airport_long_lat(self, airport_icao: str) -> Tuple[float, float]:
+    #     with self.conn.cursor() as curs:
+    #         curs.execute(
+    #             "SELECT longitude, latitude FROM airports WHERE icao = %s", (airport_icao,)
+    #         )
+    #         longitude, latitude = curs.fetchone()
+    #     return longitude, latitude
 
     def get_airports_for_callsign(self, callsign: str) -> Optional[Tuple[str, str]]:
         with self.conn.cursor() as curs:
@@ -288,6 +288,18 @@ class DB:
             )
             paths = curs.fetchall()
             return paths
+
+    def get_all_airports(self) -> Optional[List[Dict]]:
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "SELECT * FROM airports;"
+            )
+            response = curs.fetchall()
+            if response:
+                airports = []
+                for airport in response:
+                    airports.append(Airport(*airport)._asdict())
+                return airports
 
     def execute_script(self, script: str) -> None:
         with self.conn:
