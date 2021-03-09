@@ -44,6 +44,7 @@ Airport = namedtuple(
         "airport_id",
         "name",
         "city",
+        "country",
         "iata",
         "icao",
         "latitude",

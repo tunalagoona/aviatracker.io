@@ -42,6 +42,15 @@ def connect() -> None:
     logger.debug("A client has been connected to the server")
 
 
+@socketio.on("message")
+def send_airports(message) -> None:
+    logger.info("server received message and going to reply")
+    airports: Optional[List[Dict]] = fetch_airports(common_conf.db_params)
+    if len(airports) != 0:
+        airports_data = ['airports', airports]
+        socketio.send(airports_data)
+
+
 @socketio.on("disconnect")
 def disconnect() -> None:
     logger.debug("A client has been disconnected from the server")
@@ -50,8 +59,14 @@ def disconnect() -> None:
 states_memo = None
 
 
+def fetch_airports(params: Dict[str, Any]) -> Optional[List[Dict]]:
+    with closing(DB(**params)) as db:
+        with db:
+            airports: Optional[List[Dict]] = db.get_all_airports()
+    return airports
+
+
 def fetch_aircraft_states(params: Dict[str, Any]) -> None:
-    logger.info(f"fetch_aircraft_states takes: {params}")
     with closing(DB(**params)) as db:
         with db:
             while True:
