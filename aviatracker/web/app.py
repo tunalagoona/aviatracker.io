@@ -51,15 +51,17 @@ states_memo = None
 
 
 def fetch_aircraft_states(params: Dict[str, Any]) -> None:
+    logger.info(f"fetch_aircraft_states takes: {params}")
     with closing(DB(**params)) as db:
         with db:
             while True:
                 vectors: Optional[List[Dict]] = db.get_current_states()
-                quantity = len(vectors)
-                global states_memo
-                states_memo = vectors
-                logger.info(f"{quantity} states fetched from the DB for the time {vectors[0][0]}")
-                time.sleep(4)
+                if len(vectors) != 0:
+                    quantity = len(vectors)
+                    global states_memo
+                    states_memo = vectors
+                    logger.info(f"{quantity} states fetched from the DB for the time {vectors[0]['request_time']}")
+                    time.sleep(4)
 
 
 def broadcast_states() -> None:
@@ -78,7 +80,7 @@ def start_webapp() -> None:
     fetching_thread = threading.Thread(
         target=fetch_aircraft_states,
         daemon=True,
-        args=common_conf.db_params,
+        args=(common_conf.db_params,),
     )
     fetching_thread.start()
     broadcasting_greenthread = eventlet.spawn(broadcast_states)
