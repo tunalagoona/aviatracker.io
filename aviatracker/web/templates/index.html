@@ -68,7 +68,7 @@
                     name: "callsign",
                     type: "string"
                 }, {
-                    name: "originCountry",
+                    name: "origin_country",
                     type: "string"
                 }, {
                     name: "longitude",
@@ -77,13 +77,13 @@
                     name: "latitude",
                     type: "double"
                 }, {
-                    name: "baroAltitude",
+                    name: "baro_altitude",
                     type: "double"
                 }, {
                     name: "velocity",
                     type: "double"
                 }, {
-                    name: "trueTrack",
+                    name: "true_track",
                     type: "double"
                 }
             ];
@@ -92,7 +92,7 @@
                 symbol: marker,
                 visualVariables: {
                     type: "rotation",
-                    field: "trueTrack",
+                    field: "true_track",
                     rotationType: "geographic"
                 }
             };
@@ -107,7 +107,7 @@
                         fieldName: "callsign",
                         label: "Callsign"
                     }, {
-                        fieldName: "originCountry",
+                        fieldName: "origin_country",
                         label: "Origin country"
                     }, {
                         fieldName: "longitude",
@@ -116,13 +116,13 @@
                         fieldName: "latitude",
                         label: "Latitude, DD"
                     }, {
-                        fieldName: "baroAltitude",
+                        fieldName: "baro_altitude",
                         label: "Baro altitude, m"
                     }, {
                         fieldName: "velocity",
                         label: "Velocity, m/s"
                     }, {
-                        fieldName: "trueTrack",
+                        fieldName: "true_track",
                         label: "True track, DD"
                     }]
                 }],
@@ -138,11 +138,11 @@
                 let attributes = {
                     icao24: aircraft.icao24,
                     callsign: aircraft.callsign,
-                    originCountry: aircraft.originCountry,
+                    origin_country: aircraft.origin_country,
                     longitude: aircraft.longitude,
                     latitude: aircraft.latitude,
-                    trueTrack: aircraft.trueTrack,
-                    baroAltitude: aircraft.baroAltitude,
+                    true_track: aircraft.true_track,
+                    baro_altitude: aircraft.baro_altitude,
                     velocity: aircraft.velocity
                 };
                 return new Graphic({
@@ -156,11 +156,11 @@
             const aircraft = {
                 icao24: "XXXXX",
                 callsign: "XXXXX",
-                originCountry: "XXXXX",
+                origin_country: "XXXXX",
                 longitude: 50,
                 latitude: 50,
-                trueTrack: 56,
-                baroAltitude: 0,
+                true_track: 56,
+                baro_altitude: 0,
                 velocity: 0
             };
             let graphics = aircraftToGraphics(aircraft);
