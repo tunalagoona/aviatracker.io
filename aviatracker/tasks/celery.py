@@ -12,11 +12,13 @@ app.conf.beat_schedule = {
     "every-five-sec-insert-states": {
         "task": "aviatracker.tasks.tasks.insert_states",
         "schedule": 5.0,
+        "options": {"queue": "states"},
         "args": (),
     },
     "every-twenty-sec-update-paths": {
         "task": "aviatracker.tasks.tasks.update_paths",
         "schedule": 20.0,
+        "options": {"queue": "paths"},
         "args": (),
     },
     "every-23-hours-update-callsigns": {
