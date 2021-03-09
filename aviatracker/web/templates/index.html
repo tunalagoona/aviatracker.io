@@ -37,6 +37,7 @@
             let map = new Map({
                 basemap: "dark-gray-vector"
             });
+
             let view = new MapView({
                 container: "viewDiv",
                 map: map,
@@ -55,11 +56,23 @@
                     minScale: 100001000
                 }
             });
-            let marker = {
+
+            let aircraft_marker = {
                 type: "picture-marker",
                 url: "{{  url_for('static', filename='icon.svg') }}",
                 angle: 0
             };
+
+            let airport_marker = {
+                type: "simple-marker",
+                color: [47, 48, 48, 1],
+                outline: {
+                    width: 0,
+                    color: "white"
+                },
+                size: 5
+            };
+
             let fields = [
                 {
                     name: "icao24",
@@ -87,15 +100,44 @@
                     type: "double"
                 }
             ];
+
+            let airport_fields = [
+                {
+                    name: "icao",
+                    type: "oid"
+                }, {
+                    name: "name",
+                    type: "string"
+                }, {
+                    name: "city",
+                    type: "string"
+                }, {
+                    name: "country",
+                    type: "string"
+                }, {
+                    name: "longitude",
+                    type: "double"
+                }, {
+                    name: "latitude",
+                    type: "double"
+                }
+            ];
+
             let rotationRenderer = {
                 type: "simple",
-                symbol: marker,
+                symbol: aircraft_marker,
                 visualVariables: {
                     type: "rotation",
                     field: "true_track",
                     rotationType: "geographic"
                 }
             };
+
+            let airportsRenderer = {
+                type: "simple",
+                symbol: airport_marker,
+            };
+
             let popup = new PopupTemplate ({
                 title: "Aircraft information",
                 content: [{
@@ -128,6 +170,32 @@
                 }],
             });
 
+            let airport_popup = new PopupTemplate ({
+                title: "Airport information",
+                content: [{
+                    type: "airport_fields",
+                    fieldInfos: [{
+                        fieldName: "icao",
+                        label: "Icao"
+                    }, {
+                        fieldName: "name",
+                        label: "Name"
+                    }, {
+                        fieldName: "city",
+                        label: "City"
+                    }, {
+                        fieldName: "country",
+                        label: "Country"
+                    }, {
+                        fieldName: "longitude",
+                        label: "Longitude, DD"
+                    }, {
+                        fieldName: "latitude",
+                        label: "Latitude, DD"
+                    }]
+                }],
+            });
+
             function aircraftToGraphics (aircraft) {
 
                 let point = {
@@ -147,9 +215,31 @@
                 };
                 return new Graphic({
                     geometry: point,
-                    symbol: marker,
+                    symbol: aircraft_marker,
                     attributes: attributes,
                     popupTemplate: popup
+                })
+            }
+
+            function airportToGraphics (airport) {
+                let point = {
+                    type: "point",
+                    longitude: airport.longitude,
+                    latitude: airport.latitude
+                };
+                let attributes = {
+                    icao: airport.icao,
+                    city: airport.city,
+                    country: airport.country,
+                    longitude: airport.longitude,
+                    latitude: airport.latitude,
+                    name: airport.name
+                };
+                return new Graphic({
+                    geometry: point,
+                    symbol: airport_marker,
+                    attributes: attributes,
+                    popupTemplate: airport_popup
                 })
             }
 
@@ -164,6 +254,32 @@
                 velocity: 0
             };
             let graphics = aircraftToGraphics(aircraft);
+
+            const airport = {
+                icao: "XXXX",
+                city: "XXXX",
+                country: "XXXX",
+                longitude: 40,
+                latitude: 40,
+                name: "XXXX"
+            }
+
+            let airport_graphics = airportToGraphics(airport);
+
+            let airportFeatureLayer = new FeatureLayer({
+                source: [airport_graphics],
+                supportsEditing: true,
+                supportsAdd: true,
+                fields: airport_fields,
+                objectIdField: "icao",
+                renderer: airportsRenderer,
+                geometryType: "point",
+                spatialReference: {
+                    wkid: 3857
+                },
+                popupEnabled: true,
+                popupTemplate: airport_popup
+            });
 
             let featureLayer = new FeatureLayer({
                 source: [graphics],
@@ -192,8 +308,8 @@
                 spatialReference: view.spatialReference
             });
 
-            async function applyEditsToLayer(edits) {
-                let results = await featureLayer.applyEdits(edits);
+            async function applyEditsToLayer(edits, layer) {
+                let results = await layer.applyEdits(edits);
                 if (results.deleteFeatureResults.length > 0) {
                     console.log(
                         results.deleteFeatureResults.length,
@@ -206,7 +322,7 @@
                     results.addFeatureResults.forEach(function (item) {
                         objectIds.push(item.objectId);
                     });
-                    let res = await featureLayer.queryFeatures({
+                    let res = await layer.queryFeatures({
                         objectIds: objectIds
                     });
                     console.log(res.features.length + " object(s) have been added");
@@ -215,7 +331,7 @@
                 }
             }
 
-            async function removeFeatures(graphics) {
+            async function removeFeatures(graphics, layer) {
                 async function constructDeletes(graphics) {
                     let deleteEdits = {
                         deleteFeatures: []
@@ -224,7 +340,7 @@
                         deleteEdits.deleteFeatures = graphics;
                         return deleteEdits;
                     } else {
-                        let results = await featureLayer.queryFeatures();
+                        let results = await layer.queryFeatures();
                         deleteEdits.deleteFeatures = results.features;
                         return deleteEdits;
                     }
@@ -232,12 +348,12 @@
                 let edits = await constructDeletes(graphics);
                 // console.log("removeFeatures: edits = " + edits);
                 // console.log(edits);
-                await applyEditsToLayer(edits);
+                await applyEditsToLayer(edits, layer);
                 // console.log("delete finished");
                 addStarts = Date.now();
             }
 
-            async function addFeatures(graphics) {
+            async function addFeatures(graphics, layer) {
                 let addObjects = {
                     addFeatures: []
                 };
@@ -246,11 +362,14 @@
                         addObjects.addFeatures.push(item);
                     })
                 }
-                await applyEditsToLayer(addObjects);
+                await applyEditsToLayer(addObjects, layer);
             }
 
+            map.add(airportFeatureLayer);
+            removeFeatures([], airportFeatureLayer);
+
             map.add(featureLayer);
-            removeFeatures([]);
+            removeFeatures([], featureLayer);
 
             watchUtils.whenTrue(view, "stationary", function() {
                 if (view.extent) {
@@ -361,13 +480,23 @@
                         addObjects.push(graphics[icao]);
                     })
                 }
-                await removeFeatures(deleteObjects);
-                await addFeatures(addObjects);
+                await removeFeatures(deleteObjects, featureLayer);
+                await addFeatures(addObjects, featureLayer);
 
                 graphicObjects = graphics;
             }
 
-            function updateAircrafts (aircraft) {
+            async function drawAirports (airports) {
+                console.log("ready to draw");
+                addObjects = [];
+                airports[1].forEach(airport => {
+                    airportGraphic = airportToGraphics(airport)
+                    addObjects.push(airportGraphic);
+                });
+                await addFeatures(addObjects, airportFeatureLayer);
+            }
+
+            function updateAircraft (aircraft) {
                 buckets = bucketize(aircraft);
                 render(buckets, extentCoords);
             }
@@ -377,10 +506,15 @@
 
                 socket.on('connect', () => {
                     console.log('client: connected');
+                    socket.send("Ready to draw the airports");
                 });
 
                 socket.on('message', data => {
-                    updateAircrafts(data);
+                    if (data[0] === 'airports') {
+                        drawAirports(data);
+                    } else {
+                        updateAircraft(data);
+                    }
                 });
             });
         })
