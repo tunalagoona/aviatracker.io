@@ -579,10 +579,11 @@
                 render(buckets, extentCoords);
             }
 
-<!--            function updateAircraftAttributes (paths) {-->
-<!--                paths = paths[1];-->
-<!--                console.log("received " + paths.length + " paths.");-->
-<!--            }-->
+            function processPaths (paths) {
+                paths = paths[1];
+                console.log("received " + paths.length + " paths.");
+                console.log("first record: " + paths[1].icao24);
+            }
 
             $(document).ready(function(){
                 const socket = io({transports: ['websocket']});
@@ -597,7 +598,7 @@
                         drawAirports(data);
                     } else {
                         if (data[0] === "paths") {
-                            updateAircraftAttributes(data);
+                            processPaths(data);
                         } else {
                             updateAircraft(data);
                         }
@@ -621,8 +622,8 @@
                                     socket.send(["icao24", icao])
                             }
                         });
-                    })
-                };
+                    });
+                });
             });
         })
 
