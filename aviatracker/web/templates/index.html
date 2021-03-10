@@ -23,7 +23,6 @@
             "esri/geometry/support/webMercatorUtils",
             "esri/core/watchUtils"
         ], function(Map, MapView, Graphic, Feature, PopupTemplate, FeatureLayer, webMercatorUtils, watchUtils) {
-
             let buckets = [];
             let graphicObjects = {};
             let extentCoords = {
@@ -75,8 +74,11 @@
 
             let fields = [
                 {
-                    name: "icao24",
+                    name: "objectID",
                     type: "oid"
+                }, {
+                    name: "icao24",
+                    type: "string"
                 }, {
                     name: "callsign",
                     type: "string"
@@ -103,8 +105,11 @@
 
             let airport_fields = [
                 {
-                    name: "icao",
+                    name: "objectID",
                     type: "oid"
+                }, {
+                    name: "icao",
+                    type: "string"
                 }, {
                     name: "name",
                     type: "string"
@@ -283,7 +288,6 @@
                 supportsEditing: true,
                 supportsAdd: true,
                 fields: airport_fields,
-                objectIdField: "icao",
                 renderer: airportsRenderer,
                 geometryType: "point",
                 spatialReference: {
@@ -299,9 +303,50 @@
                 supportsEditing: true,
                 supportsAdd: true,
                 fields: fields,
-                objectIdField: "icao24",
                 renderer: rotationRenderer,
                 geometryType: "point",
+                spatialReference: {
+                    wkid: 3857
+                },
+                popupEnabled: true,
+                popupTemplate: popup,
+                outFields: ["*"]
+            });
+
+            const remainingPath = {
+                type: "polyline",
+                paths: [
+                    [90, 60], //Longitude, latitude
+                    [20, 53],  //Longitude, latitude
+                    [2, 40],  //Longitude, latitude
+                ]
+            };
+
+            const remainingPathSymbol = {
+                type: "simple-line",
+                color: [226, 119, 40], // Orange
+                width: 2,
+                style: "short-dot"
+            };
+
+            const remainingPathGraphic = new Graphic({
+                geometry: remainingPath,
+                symbol: remainingPathSymbol
+            });
+
+            let pathsRenderer = {
+                type: "simple",
+                symbol: remainingPathSymbol,
+            };
+
+            let remainingPathFeatureLayer = new FeatureLayer({
+                source: [remainingPathGraphic],
+                supportsEditing: true,
+                supportsAdd: true,
+                fields: fields,
+                objectIdField: "objectID",
+                renderer: pathsRenderer,
+                geometryType: "polyline",
                 spatialReference: {
                     wkid: 3857
                 },
@@ -384,6 +429,8 @@
             map.add(featureLayer);
             removeFeatures([], featureLayer);
 
+            map.add(remainingPathFeatureLayer);
+
             watchUtils.whenTrue(view, "stationary", function() {
                 if (view.extent) {
                     extentCoords.xMin = parseFloat(view.extent.xmin.toFixed(2));
@@ -398,6 +445,7 @@
 
             view.whenLayerView(featureLayer).then(function (layerView) {
                 let highlight;
+
                 view.on("pointer-move", function (event) {
                     view.hitTest(event).then(function (response) {
                         let results = response.results;
@@ -531,6 +579,11 @@
                 render(buckets, extentCoords);
             }
 
+<!--            function updateAircraftAttributes (paths) {-->
+<!--                paths = paths[1];-->
+<!--                console.log("received " + paths.length + " paths.");-->
+<!--            }-->
+
             $(document).ready(function(){
                 const socket = io({transports: ['websocket']});
 
@@ -539,13 +592,37 @@
                     socket.send("Ready to draw the airports");
                 });
 
-                socket.on('message', data => {
-                    if (data[0] === 'airports') {
+                socket.on("message", data => {
+                    if (data[0] === "airports") {
                         drawAirports(data);
                     } else {
-                        updateAircraft(data);
+                        if (data[0] === "paths") {
+                            updateAircraftAttributes(data);
+                        } else {
+                            updateAircraft(data);
+                        }
                     }
                 });
+
+                view.whenLayerView(featureLayer).then(function (layerView) {
+                    view.on("click", function (event) {
+                        var screenPoint = {
+                            x: event.x,
+                            y: event.y
+                        };
+
+                        view.hitTest(screenPoint).then(function (response) {
+                            if (response.results.length) {
+                                var graphic = response.results.filter(function (result) {
+                                    return result.graphic.layer === featureLayer;
+                                    })[0].graphic;
+                                    var attributes = graphic.attributes;
+                                    let icao = attributes.icao24;
+                                    socket.send(["icao24", icao])
+                            }
+                        });
+                    })
+                };
             });
         })
 
