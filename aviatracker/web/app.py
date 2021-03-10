@@ -44,11 +44,18 @@ def connect() -> None:
 
 @socketio.on("message")
 def send_airports(message) -> None:
-    logger.info("server received message and going to reply")
-    airports: Optional[List[Dict]] = fetch_airports(common_conf.db_params)
-    if len(airports) != 0:
-        airports_data = ['airports', airports]
-        socketio.send(airports_data)
+    logger.debug("server received message and going to reply")
+    if message[0] == "icao24":
+        logger.info("received path request")
+        icao = message[1]
+        paths: Optional[List[Dict]] = fetch_paths(icao, common_conf.db_params)
+        paths_message = ["paths", paths]
+        socketio.send(paths_message)
+    else:
+        airports: Optional[List[Dict]] = fetch_airports(common_conf.db_params)
+        if len(airports) != 0:
+            airports_message = ['airports', airports]
+            socketio.send(airports_message)
 
 
 @socketio.on("disconnect")
@@ -86,21 +93,12 @@ def broadcast_states() -> None:
         time.sleep(1)
 
 
-def fetch_aircraft_current_paths(params: Dict[str, Any]) -> None:
-    while True:
-        current_flights: Optional[List[Dict]] = states_memo
-        paths = []
-        with closing(DB(**params)) as db:
-            with db:
-                for flight in current_flights:
-                    icao = flight["icao24"]
-                    icao_paths: Optional[Dict] = db.find_unfinished_path_for_aircraft(icao)
-                    if icao_paths:
-                        paths.append(icao_paths)
-        paths = ["paths", paths]
-        socketio.send(paths)
-        eventlet.sleep(19)
-        time.sleep(1)
+def fetch_paths(icao, params: Dict[str, Any]) -> Optional[List[Dict]]:
+    with closing(DB(**params)) as db:
+        with db:
+            paths: Optional[List[Dict]] = db.get_all_paths_for_icao(icao)
+            if paths:
+                return paths
 
 
 def start_app() -> None:
@@ -117,12 +115,10 @@ def start_webapp() -> None:
     fetching_thread.start()
 
     broadcasting_greenthread = eventlet.spawn(broadcast_states)
-    path_retrieving_greenthread = eventlet.spawn(fetch_aircraft_current_paths)
     app_launch_greenthread = eventlet.spawn(start_app)
 
     app_launch_greenthread.wait()
     broadcasting_greenthread.wait()
-    path_retrieving_greenthread.wait()
 
     fetching_thread.join()
 
