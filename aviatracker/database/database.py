@@ -301,6 +301,16 @@ class DB:
                     airports.append(Airport(*airport)._asdict())
                 return airports
 
+    def get_paths_for_icao(self, icao) -> Optional[List[Dict]]:
+        with self.conn.cursor() as curs:
+            curs.execute(
+                "SELECT * FROM flight_paths "
+                "WHERE icao24 = %s", (icao,)
+            )
+            paths = curs.fetchall()
+            if paths:
+                return paths
+
     def execute_script(self, script: str) -> None:
         with self.conn:
             with self.conn.cursor() as curs:
