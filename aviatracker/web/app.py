@@ -86,6 +86,23 @@ def broadcast_states() -> None:
         time.sleep(1)
 
 
+def fetch_aircraft_current_paths(params: Dict[str, Any]) -> None:
+    while True:
+        current_flights: Optional[List[Dict]] = states_memo
+        paths = []
+        with closing(DB(**params)) as db:
+            with db:
+                for flight in current_flights:
+                    icao = flight["icao24"]
+                    icao_paths: Optional[Dict] = db.find_unfinished_path_for_aircraft(icao)
+                    if icao_paths:
+                        paths.append(icao_paths)
+        paths = ["paths", paths]
+        socketio.send(paths)
+        eventlet.sleep(19)
+        time.sleep(1)
+
+
 def start_app() -> None:
     socketio.run(app, host="0.0.0.0", log_output=True)
     eventlet.sleep(0.1)
@@ -98,10 +115,15 @@ def start_webapp() -> None:
         args=(common_conf.db_params,),
     )
     fetching_thread.start()
+
     broadcasting_greenthread = eventlet.spawn(broadcast_states)
+    path_retrieving_greenthread = eventlet.spawn(fetch_aircraft_current_paths)
     app_launch_greenthread = eventlet.spawn(start_app)
+
     app_launch_greenthread.wait()
     broadcasting_greenthread.wait()
+    path_retrieving_greenthread.wait()
+
     fetching_thread.join()
 
 
