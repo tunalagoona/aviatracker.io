@@ -5,7 +5,7 @@ eventlet.monkey_patch()
 from contextlib import closing
 import threading
 import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO
@@ -48,8 +48,10 @@ def send_airports(message) -> None:
     if message[0] == "icao24":
         logger.info("received path request")
         icao = message[1]
+        x = message[2]
+        y = message[3]
         paths: Optional[List[Dict]] = fetch_paths(icao, common_conf.db_params)
-        paths_message = ["paths", paths]
+        paths_message = ["paths", paths, x, y]
         socketio.send(paths_message)
     else:
         airports: Optional[List[Dict]] = fetch_airports(common_conf.db_params)
@@ -75,15 +77,22 @@ def fetch_airports(params: Dict[str, Any]) -> Optional[List[Dict]]:
 
 def fetch_aircraft_states(params: Dict[str, Any]) -> None:
     with closing(DB(**params)) as db:
-        with db:
-            while True:
+        while True:
+            with db:
                 vectors: Optional[List[Dict]] = db.get_current_states()
-                if len(vectors) != 0:
-                    quantity = len(vectors)
-                    global states_memo
-                    states_memo = vectors
-                    logger.info(f"{quantity} states fetched from the DB for the time {vectors[0]['request_time']}")
-                    time.sleep(4)
+            if len(vectors) != 0:
+                for vector in vectors:
+                    airports: Optional[Tuple[str, str]] = db.get_airports_for_callsign(vector["callsign"])
+                    est_arrival_airport = airports[0]
+                    est_departure_airport = airports[2]
+                    vector["est_arrival_airport"] = est_arrival_airport
+                    vector["est_departure_airport"] = est_departure_airport
+
+                quantity = len(vectors)
+                global states_memo
+                states_memo = vectors
+                logger.info(f"{quantity} states fetched from the DB for the time {vectors[0]['request_time']}")
+                time.sleep(4)
 
 
 def broadcast_states() -> None:
