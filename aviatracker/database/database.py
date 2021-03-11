@@ -145,7 +145,7 @@ class DB:
             arr_airport = curs.fetchone()
             return arr_airport
 
-    def find_unfinished_path_for_aircraft(self, icao) -> Optional[FlightPath]:
+    def find_unfinished_path_for_aircraft(self, icao) -> Optional[Dict]:
         with self.conn.cursor() as curs:
             curs.execute(
                 "SELECT * FROM flight_paths WHERE icao24 = %s AND finished = False", (icao,)
@@ -153,9 +153,7 @@ class DB:
             record = curs.fetchone()
             if record:
                 record = record[1:]
-            # logger.info(f"record unfinished: {record}")
-            if record:
-                path = FlightPath(*record)
+                path = FlightPath(*record)._asdict()
                 return path
 
     # def get_airport_long_lat(self, airport_icao: str) -> Tuple[float, float]:
@@ -301,14 +299,17 @@ class DB:
                     airports.append(Airport(*airport)._asdict())
                 return airports
 
-    def get_paths_for_icao(self, icao) -> Optional[List[Dict]]:
+    def get_all_paths_for_icao(self, icao) -> Optional[List[Dict]]:
         with self.conn.cursor() as curs:
             curs.execute(
                 "SELECT * FROM flight_paths "
                 "WHERE icao24 = %s", (icao,)
             )
-            paths = curs.fetchall()
-            if paths:
+            response = curs.fetchall()
+            paths = []
+            if response:
+                for path in response:
+                    paths.append(FlightPath(*path[1:])._asdict())
                 return paths
 
     def execute_script(self, script: str) -> None:
