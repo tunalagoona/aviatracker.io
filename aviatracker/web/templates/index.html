@@ -69,7 +69,7 @@
                     width: 0.4,
                     color: [37, 38, 38, 1]
                 },
-                size: 5
+                size: 4
             };
 
             let fields = [
@@ -100,6 +100,12 @@
                 }, {
                     name: "true_track",
                     type: "double"
+                }, {
+                    name: "est_arrival_airport",
+                    type: "string"
+                }, {
+                    name: "est_departure_airport",
+                    type: "string"
                 }
             ];
 
@@ -171,6 +177,12 @@
                     }, {
                         fieldName: "true_track",
                         label: "True track, DD"
+                    }, {
+                        fieldName: "est_arrival_airport",
+                        label: "Arrival airport (est)"
+                    }, {
+                        fieldName: "est_departure_airport",
+                        label: "Departure airport (est)"
                     }]
                 }],
             });
@@ -228,7 +240,9 @@
                     latitude: aircraft.latitude,
                     true_track: aircraft.true_track,
                     baro_altitude: aircraft.baro_altitude,
-                    velocity: aircraft.velocity
+                    velocity: aircraft.velocity,
+                    est_arrival_airport: aircraft.est_arrival_airport,
+                    est_departure_airport: aircraft.est_departure_airport
                 };
                 return new Graphic({
                     geometry: point,
@@ -268,8 +282,11 @@
                 latitude: 50,
                 true_track: 56,
                 baro_altitude: 0,
-                velocity: 0
+                velocity: 0,
+                est_arrival_airport: "XXXX",
+                est_departure_airport: "XXXX"
             };
+
             let graphics = aircraftToGraphics(aircraft);
 
             const airport = {
@@ -320,6 +337,13 @@
                     [20, 53],  //Longitude, latitude
                     [2, 40],  //Longitude, latitude
                 ]
+            };
+
+            const traveledPathSymbol = {
+                type: "simple-line",
+                color: [226, 119, 40], // Orange
+                width: 2,
+                style: "solid"
             };
 
             const remainingPathSymbol = {
@@ -430,6 +454,7 @@
             removeFeatures([], featureLayer);
 
             map.add(remainingPathFeatureLayer);
+            removeFeatures([], remainingPathFeatureLayer);
 
             watchUtils.whenTrue(view, "stationary", function() {
                 if (view.extent) {
@@ -497,8 +522,10 @@
                     buckets[i] = [];
                 }
                 aircraft.forEach(aircraft => {
-                    let hash = calculateHash(aircraft['icao24'], Object.keys(buckets).length);
-                    buckets[hash].push(aircraft);
+                    if (aircraft['icao24'] !== undefined) {
+                        let hash = calculateHash(aircraft['icao24'], Object.keys(buckets).length);
+                        buckets[hash].push(aircraft);
+                    }
                 });
                 return buckets
             }
@@ -558,6 +585,8 @@
                         addObjects.push(graphics[icao]);
                     })
                 }
+
+                console.log("addObjects length: " + addObjects.length);
                 await removeFeatures(deleteObjects, featureLayer);
                 await addFeatures(addObjects, featureLayer);
 
@@ -579,10 +608,87 @@
                 render(buckets, extentCoords);
             }
 
-            function processPaths (paths) {
-                paths = paths[1];
-                console.log("received " + paths.length + " paths.");
-                console.log("first record: " + paths[1].icao24);
+            function pathToGraphics (path, icao) {
+                console.log("__Starting pathToGraphics__");
+                let paths = [];
+                console.log("path in pathToGraphics: " + path);
+                path.forEach(lonLat => {
+                    console.log("lonLat: " + lonLat);
+                    console.log("lonLat.longitude: " + lonLat.longitude);
+                    longitude = lonLat.longitude;
+                    latitude = lonLat.latitude;
+                    paths.push([longitude, latitude]);
+                })
+                console.log("paths: " + paths);
+
+                let traveledPath = {
+                    type: "polyline",
+                    paths: paths
+                };
+
+                let pathAttributes = {
+                    icao24: icao,
+                }
+
+                let pathGraphic = new Graphic({
+                    geometry: traveledPath,
+                    symbol: traveledPathSymbol,
+                    attributes: pathAttributes
+                })
+
+                console.log("pathGraphic.geometry.type1: " + pathGraphic.geometry.type);
+
+                return pathGraphic
+            }
+
+            async function processPaths (flights) {
+                paths = flights[1];
+                console.log("flights[1]: " + flights[1]);
+                let x = flights[2];
+                console.log("flights[2]: " + flights[2]);
+                let y = flights[3];
+                console.log("flights[3]: " + flights[3]);
+
+                console.log("x,y = " + x + ", " + y);
+
+                console.log("received " + paths.length + " flights.");
+                if (paths.length !== 0) {
+                    console.log("first record icao: " + paths[0].icao24);
+                    console.log("first record paths[0] longitude: " + paths[0].path[0].longitude);
+                    console.log("first record paths[0] latitude: " + paths[0].path[0].latitude);
+                    let lastFlight;
+                    paths.forEach(flight => {
+                        console.log("flight.path: " + flight.path);
+                        console.log("flight.finished: " + flight.finished);
+
+                        if (flight.finished === false) {
+                            console.log("found unfinished flight");
+                            lastFlight = flight;
+                        }
+                    })
+                    if (lastFlight !== undefined) {
+
+<!--                        path = [];-->
+<!--                        path.push(DEPARTURE Arr COORDS!!!!);-->
+
+                        lastFlight.path.push({longitude: x, latitude: y});
+                        console.log("lastFlight.path: " + lastFlight.path);
+
+                        lastFlight.path.forEach(path => {
+                            console.log("path longitude, latitude: " + lastFlight.path[0].longitude + ", "+ lastFlight.path[0].latitude);
+                        })
+
+                        let pathGraphic = pathToGraphics(lastFlight.path, lastFlight.icao24);
+                        console.log("pathGraphic.geometry.type2: " + pathGraphic.geometry.type);
+
+                        console.log("Let's draw the path");
+                        addObjects = [];
+                        addObjects.push(pathGraphic);
+                        await addFeatures(addObjects, remainingPathFeatureLayer);
+                    } else {
+                        console.log("No unfinished paths");
+                    }
+                }
             }
 
             $(document).ready(function(){
@@ -594,32 +700,42 @@
                 });
 
                 socket.on("message", data => {
-                    if (data[0] === "airports") {
-                        drawAirports(data);
-                    } else {
-                        if (data[0] === "paths") {
-                            processPaths(data);
+                    if (data !== undefined) {
+                        if (data[0] === "airports") {
+                            drawAirports(data);
                         } else {
-                            updateAircraft(data);
+                            if (data[0][0] === "paths") {
+                                console.log("____________________data: " + data);
+                                if (data[1] !== null) {
+                                    processPaths(data);
+                                }
+                            } else {
+                                updateAircraft(data);
+                            }
                         }
                     }
                 });
 
                 view.whenLayerView(featureLayer).then(function (layerView) {
                     view.on("click", function (event) {
-                        var screenPoint = {
+                        let screenPoint = {
                             x: event.x,
                             y: event.y
                         };
 
+                        console.log("!!!!!!!!!!!!!!!!!screenPoint.x: " + screenPoint.x);
+
                         view.hitTest(screenPoint).then(function (response) {
-                            if (response.results.length) {
-                                var graphic = response.results.filter(function (result) {
+                            if (response.results.length !== 0) {
+                                let feature = response.results.filter(result => {
                                     return result.graphic.layer === featureLayer;
-                                    })[0].graphic;
-                                    var attributes = graphic.attributes;
+                                })
+                                if (feature !== undefined) {
+                                    let graphic = feature[0].graphic;
+                                    let attributes = graphic.attributes;
                                     let icao = attributes.icao24;
-                                    socket.send(["icao24", icao])
+                                    socket.send(["icao24", icao, screenPoint.x, screenPoint.y])
+                                }
                             }
                         });
                     });
