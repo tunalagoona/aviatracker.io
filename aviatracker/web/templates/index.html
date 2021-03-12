@@ -612,6 +612,7 @@
                 console.log("__Starting pathToGraphics__");
                 let paths = [];
                 console.log("path in pathToGraphics: " + path);
+
                 path.forEach(lonLat => {
                     console.log("lonLat: " + lonLat);
                     console.log("lonLat.longitude: " + lonLat.longitude);
@@ -642,41 +643,45 @@
             }
 
             async function processPaths (flights) {
-                paths = flights[1];
-                console.log("flights[1]: " + flights[1]);
+                records = flights[1];
+                console.log("paths received from server: " + records);
                 let x = flights[2];
-                console.log("flights[2]: " + flights[2]);
+                console.log("longitude at the moment: " + x);
                 let y = flights[3];
-                console.log("flights[3]: " + flights[3]);
+                console.log("latitude at the moment: " + y);
 
-                console.log("x,y = " + x + ", " + y);
-
-                console.log("received " + paths.length + " flights.");
-                if (paths.length !== 0) {
-                    console.log("first record icao: " + paths[0].icao24);
-                    console.log("first record paths[0] longitude: " + paths[0].path[0].longitude);
-                    console.log("first record paths[0] latitude: " + paths[0].path[0].latitude);
+                console.log("received " + records.length + " flights.");
+                if (records.length !== 0) {
+                    console.log("first record icao: " + records[0].icao24);
+<!--                    console.log("first record records[0] longitude: " + records[0].path[0].longitude);-->
+<!--                    console.log("first record records[0] latitude: " + records[0].path[0].latitude);-->
                     let lastFlight;
-                    paths.forEach(flight => {
+                    records.forEach(flight => {
                         console.log("flight.path: " + flight.path);
                         console.log("flight.finished: " + flight.finished);
 
                         if (flight.finished === false) {
                             console.log("found unfinished flight");
+                            console.log("departure airport: " + flight.departure_airport_icao);
+                            console.log("arrival airport: " + flight.arrival_airport_icao);
                             lastFlight = flight;
                         }
                     })
                     if (lastFlight !== undefined) {
 
-<!--                        path = [];-->
-<!--                        path.push(DEPARTURE Arr COORDS!!!!);-->
-
-                        lastFlight.path.push({longitude: x, latitude: y});
-                        console.log("lastFlight.path: " + lastFlight.path);
+<!--                        traveledTrajectory = [];-->
+<!--                        if (flight.departure_airport_icao !== null) {-->
+<!--                            find airport coordinates-->
+<!--                            traveledTrajectory.push(DEPARTURE Arr COORDS!!!!);-->
+<!--                        }-->
+<!--                        -->
 
                         lastFlight.path.forEach(path => {
-                            console.log("path longitude, latitude: " + lastFlight.path[0].longitude + ", "+ lastFlight.path[0].latitude);
+                            console.log("path longitude, latitude: " + path.longitude + ", "+ path.latitude);
                         })
+
+                        lastFlight.path.push({longitude: x, latitude: y});
+                        console.log("lastFlight.path after push: " + lastFlight.path);
 
                         let pathGraphic = pathToGraphics(lastFlight.path, lastFlight.icao24);
                         console.log("pathGraphic.geometry.type2: " + pathGraphic.geometry.type);
@@ -718,12 +723,14 @@
 
                 view.whenLayerView(featureLayer).then(function (layerView) {
                     view.on("click", function (event) {
+
                         let screenPoint = {
                             x: event.x,
                             y: event.y
                         };
 
-                        console.log("!!!!!!!!!!!!!!!!!screenPoint.x: " + screenPoint.x);
+                        console.log("screenPoint.x before: " + screenPoint.x);
+                        console.log("screenPoint.y before: " + screenPoint.y);
 
                         view.hitTest(screenPoint).then(function (response) {
                             if (response.results.length !== 0) {
@@ -731,9 +738,19 @@
                                     return result.graphic.layer === featureLayer;
                                 })
                                 if (feature !== undefined) {
+                                    console.log("feature.length: " + feature.length);
                                     let graphic = feature[0].graphic;
                                     let attributes = graphic.attributes;
                                     let icao = attributes.icao24;
+
+                                    let mp = webMercatorUtils.webMercatorToGeographic(event.mapPoint);
+
+                                    screenPoint.x = mp.x;
+                                    screenPoint.y = mp.y;
+
+                                    console.log("screenPoint.x after: " + screenPoint.x);
+                                    console.log("screenPoint.y after: " + screenPoint.y);
+
                                     socket.send(["icao24", icao, screenPoint.x, screenPoint.y])
                                 }
                             }
