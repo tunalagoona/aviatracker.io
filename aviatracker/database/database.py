@@ -306,11 +306,11 @@ class DB:
                 "WHERE icao24 = %s", (icao,)
             )
             response = curs.fetchall()
-            paths = []
+            flights = []
             if response:
-                for path in response:
-                    paths.append(FlightPath(*path[1:])._asdict())
-                return paths
+                for flight in response:
+                    flights.append(FlightPath(*flight[1:])._asdict())
+                return flights
 
     def execute_script(self, script: str) -> None:
         with self.conn:
