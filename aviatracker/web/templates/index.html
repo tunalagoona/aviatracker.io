@@ -210,19 +210,19 @@
                         fieldName: "latitude",
                         label: "Latitude, DD"
                     }]
-<!--                }, {-->
-<!--                    type: "media",-->
-<!--                    mediaInfos: [-->
-<!--                        {-->
-<!--                        title: "<b>Arrivals per day</b>",-->
-<!--                        type: "linechart",-->
-<!--                        caption: "",-->
-<!--                        value: {-->
-<!--                            fields: ["field1", "field2"],-->
-<!--                            normalizeField: null,-->
-<!--                            tooltipField: "relationships/0/COMMON"-->
-<!--                        }-->
-                }],
+                    // }, {
+                    //     type: "media",
+                    //     mediaInfos: [
+                    //         {
+                    //        title: "<b>Arrivals per day</b>",
+                    //         type: "linechart",
+                    //        caption: "",
+                    //        value: {
+                    //            fields: ["field1", "field2"],
+                    //             normalizeField: null,
+                    //            tooltipField: "relationships/0/COMMON"
+                    //        }
+                }]
             });
 
             function aircraftToGraphics (aircraft) {
@@ -360,11 +360,39 @@
 
             let pathsRenderer = {
                 type: "simple",
-                symbol: remainingPathSymbol,
+<!--                symbol: remainingPathSymbol,-->
             };
 
             let remainingPathFeatureLayer = new FeatureLayer({
                 source: [remainingPathGraphic],
+                supportsEditing: true,
+                supportsAdd: true,
+                fields: fields,
+                objectIdField: "objectID",
+                renderer: pathsRenderer,
+                geometryType: "polyline",
+                spatialReference: {
+                    wkid: 3857
+                },
+                popupEnabled: true,
+                popupTemplate: popup
+            });
+
+            const traveledPath = {
+                type: "polyline",
+                paths: [
+                    [10, 10], //Longitude, latitude
+                    [20, 20],  //Longitude, latitude
+                ]
+            };
+
+            const traveledPathGraphic = new Graphic({
+                geometry: traveledPath,
+                symbol: traveledPathSymbol
+            });
+
+            let traveledPathFeatureLayer = new FeatureLayer({
+                source: [traveledPathGraphic],
                 supportsEditing: true,
                 supportsAdd: true,
                 fields: fields,
@@ -391,6 +419,7 @@
             });
 
             async function applyEditsToLayer(edits, layer) {
+                console.log("applyEditsToLayer started");
                 let results = await layer.applyEdits(edits);
                 if (results.deleteFeatureResults.length > 0) {
                     console.log(
@@ -455,6 +484,9 @@
 
             map.add(remainingPathFeatureLayer);
             removeFeatures([], remainingPathFeatureLayer);
+
+            map.add(traveledPathFeatureLayer);
+            removeFeatures([], traveledPathFeatureLayer);
 
             watchUtils.whenTrue(view, "stationary", function() {
                 if (view.extent) {
@@ -637,62 +669,52 @@
                     attributes: pathAttributes
                 })
 
-                console.log("pathGraphic.geometry.type1: " + pathGraphic.geometry.type);
-
                 return pathGraphic
             }
 
-            async function processPaths (flights) {
-                records = flights[1];
-                console.log("paths received from server: " + records);
-                let x = flights[2];
-                console.log("longitude at the moment: " + x);
-                let y = flights[3];
-                console.log("latitude at the moment: " + y);
+            async function renderFlight (serverMessage) {
+                let flight = serverMessage[1];
+                let x = serverMessage[2];
+                let y = serverMessage[3];
 
-                console.log("received " + records.length + " flights.");
-                if (records.length !== 0) {
-                    console.log("first record icao: " + records[0].icao24);
-<!--                    console.log("first record records[0] longitude: " + records[0].path[0].longitude);-->
-<!--                    console.log("first record records[0] latitude: " + records[0].path[0].latitude);-->
-                    let lastFlight;
-                    records.forEach(flight => {
-                        console.log("flight.path: " + flight.path);
-                        console.log("flight.finished: " + flight.finished);
+                let departure_airport_icao = flight.departure_airport_icao;
 
-                        if (flight.finished === false) {
-                            console.log("found unfinished flight");
-                            console.log("departure airport: " + flight.departure_airport_icao);
-                            console.log("arrival airport: " + flight.arrival_airport_icao);
-                            lastFlight = flight;
-                        }
-                    })
-                    if (lastFlight !== undefined) {
+                console.log("flight icao: " + flight.icao24);
+                console.log("departure airport: " + flight.departure_airport_icao);
+                console.log("arrival airport: " + flight.arrival_airport_icao);
 
-<!--                        traveledTrajectory = [];-->
-<!--                        if (flight.departure_airport_icao !== null) {-->
-<!--                            find airport coordinates-->
-<!--                            traveledTrajectory.push(DEPARTURE Arr COORDS!!!!);-->
-<!--                        }-->
-<!--                        -->
+                if (flight !== undefined) {
+                    let traveledPath = [];
+                    if (flight.departure_airport_icao !== null) {
+                        let query = featureLayer.createQuery();
+                        query.where = "icao = '" + departure_airport_icao + "'";
+                        query.outFields = [ "longitude", "latitude"];
 
-                        lastFlight.path.forEach(path => {
-                            console.log("path longitude, latitude: " + path.longitude + ", "+ path.latitude);
-                        })
+                        let response = await airportFeatureLayer.queryFeatures(query);
+                        console.log("**** response for airport query: " + response);
+                        let feat = results.features;
+                        console.log("**** features found for airport query: " + feat);
 
-                        lastFlight.path.push({longitude: x, latitude: y});
-                        console.log("lastFlight.path after push: " + lastFlight.path);
-
-                        let pathGraphic = pathToGraphics(lastFlight.path, lastFlight.icao24);
-                        console.log("pathGraphic.geometry.type2: " + pathGraphic.geometry.type);
-
-                        console.log("Let's draw the path");
-                        addObjects = [];
-                        addObjects.push(pathGraphic);
-                        await addFeatures(addObjects, remainingPathFeatureLayer);
-                    } else {
-                        console.log("No unfinished paths");
+<!--                        traveledPath.push();-->
                     }
+
+                    console.log("quantity of paths for the flight: " + flight.path.length);
+
+                    flight.path.forEach(path => {
+                        console.log("path longitude, latitude: " + path.longitude + ", "+ path.latitude);
+                    })
+
+                    traveledPath.push(flight.path);
+                    traveledPath.push({longitude: x, latitude: y});
+
+                    console.log("traveledPath: " + traveledPath);
+
+                    let pathGraphic = pathToGraphics(traveledPath, flight.icao24);
+
+                    console.log("Let's draw the path! =)");
+                    addObjects = [];
+                    addObjects.push(pathGraphic);
+                    await addFeatures(addObjects, traveledPathFeatureLayer);
                 }
             }
 
@@ -709,10 +731,10 @@
                         if (data[0] === "airports") {
                             drawAirports(data);
                         } else {
-                            if (data[0][0] === "paths") {
-                                console.log("____________________data: " + data);
+                            if (data[0][0] === "flight") {
+                                console.log("received flight from the server: " + data);
                                 if (data[1] !== null) {
-                                    processPaths(data);
+                                    renderFlight(data);
                                 }
                             } else {
                                 updateAircraft(data);
@@ -759,7 +781,6 @@
                 });
             });
         })
-
 
     </script>
 </head>
