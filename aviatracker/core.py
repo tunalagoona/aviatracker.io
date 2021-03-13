@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from contextlib import closing
 from datetime import datetime
 from typing import List, Optional, Dict
@@ -17,19 +18,20 @@ def update_flight_paths():
     with closing(DB(**params)) as db:
         with db:
             db.delete_outdated_paths()
-            db.update_path_when_finished()
+            db.update_paths_when_finished()
         with db:
             states: Optional[List[Dict]] = db.get_current_states()
+            logger.info(f"received {len(states)} states for paths update")
 
             if len(states) > 0:
-                """Ordering of the data helps to avoid deadLocks on path updates."""
-                states = sorted(states, key=lambda k: k['icao24'])
+                # """Ordering of the data helps to avoid deadLocks on path updates."""
+                # states = sorted(states, key=lambda k: k['icao24'])
                 for state in states:
                     icao = state["icao24"]
                     callsign = state["callsign"]
                     update_time = state["request_time"]
 
-                    unfinished_path: FlightPath = db.find_unfinished_path_for_aircraft(icao)
+                    unfinished_path: Optional[Dict] = db.find_unfinished_path_for_aircraft(icao)
 
                     current_location = {
                         "longitude": state["longitude"],
@@ -44,7 +46,7 @@ def update_flight_paths():
                         arrival_airport_icao, departure_airport_icao = None, None
 
                     if unfinished_path:
-                        last_update = unfinished_path.last_update
+                        last_update = unfinished_path["last_update"]
                         db.update_unfinished_path(icao, last_update, path, update_time,
                                                   arrival_airport_icao, departure_airport_icao)
                     else:
@@ -61,6 +63,8 @@ def update_flight_paths():
                         )
 
                         db.insert_path(new_path)
+
+        logger.info("!!!!!!!!!!! path update succeeds, transaction committed")
 
 
 def update_airport_stats():

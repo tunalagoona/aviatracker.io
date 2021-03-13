@@ -28,7 +28,7 @@ class Opensky(object):
                 timeout=20,
             )
             if r.status_code == codes.ok:
-                logger.debug("Successful connection to Opensky API.")
+                logger.info("Successful connection to Opensky API.")
                 response = json.loads(r.text)
                 return response
             else:
