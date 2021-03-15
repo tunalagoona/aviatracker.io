@@ -1,7 +1,7 @@
 import sys
 import time
 from contextlib import closing
-from typing import List
+from typing import List, Optional
 
 from celery.app.log import TaskFormatter
 from celery.signals import after_setup_task_logger
@@ -27,7 +27,7 @@ def update_callsigns(self) -> None:
     logger.debug("Starting task update_callsigns")
     self.time_limit = 15
     api = Opensky()
-    flights: List[OpenskyFlight] = api.get_flights_for_period(time.time() - 86400)
+    flights: Optional[List[OpenskyFlight]] = api.get_flights_for_period(int(time.time()) - 172800)
 
     if flights:
         logger.debug(f"Received {len(flights)} flights")
@@ -81,7 +81,7 @@ def update_stats(self) -> None:
     try:
         with closing(DB(**common_conf.db_params)) as db:
             with db:
-                logger.info("Starting airports statistics update")
+                logger.debug("Starting airports statistics update")
                 update_airport_stats()
     except Exception as e:
         logger.exception(f"Exception: {e}")
