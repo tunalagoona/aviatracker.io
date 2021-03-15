@@ -339,12 +339,25 @@
                 ]
             };
 
+            const traveledPath = {
+                type: "polyline",
+                paths: [
+                    [65, 55], //Longitude, latitude
+                    [70, 58],  //Longitude, latitude
+                ]
+            };
+
             const traveledPathSymbol = {
                 type: "simple-line",
                 color: [226, 119, 40], // Orange
                 width: 2,
                 style: "solid"
             };
+
+            const traveledPathGraphic = new Graphic({
+                geometry: traveledPath,
+                symbol: traveledPathSymbol
+            });
 
             const remainingPathSymbol = {
                 type: "simple-line",
@@ -360,7 +373,7 @@
 
             let pathsRenderer = {
                 type: "simple",
-<!--                symbol: remainingPathSymbol,-->
+                symbol: traveledPathSymbol,
             };
 
             let remainingPathFeatureLayer = new FeatureLayer({
@@ -376,19 +389,6 @@
                 },
                 popupEnabled: true,
                 popupTemplate: popup
-            });
-
-            const traveledPath = {
-                type: "polyline",
-                paths: [
-                    [10, 10], //Longitude, latitude
-                    [20, 20],  //Longitude, latitude
-                ]
-            };
-
-            const traveledPathGraphic = new Graphic({
-                geometry: traveledPath,
-                symbol: traveledPathSymbol
             });
 
             let traveledPathFeatureLayer = new FeatureLayer({
@@ -428,6 +428,7 @@
                     );
                 }
                 if (results.addFeatureResults.length > 0) {
+                    console.log("results.addFeatureResults.length > 0");
                     let add_finished = Date.now();
                     let objectIds = [];
                     results.addFeatureResults.forEach(function (item) {
@@ -437,6 +438,12 @@
                         objectIds: objectIds
                     });
                     console.log(res.features.length + " object(s) have been added");
+                    console.log(res.features[0]);
+
+                    Object.keys(res.features[0]).forEach(key => {
+                        console.log("res.features[0][key]: " +  res.features[0][key]);
+                    })
+
                     let time_delta = add_finished - addStarts;
                     console.log("Time spent: " + time_delta + " ms");
                 }
@@ -643,16 +650,17 @@
             function pathToGraphics (path, icao) {
                 console.log("__Starting pathToGraphics__");
                 let paths = [];
-                console.log("path in pathToGraphics: " + path);
 
-                path.forEach(lonLat => {
-                    console.log("lonLat: " + lonLat);
-                    console.log("lonLat.longitude: " + lonLat.longitude);
+                path[0].forEach(lonLat => {
+                    // console.log("lonLat: " + lonLat);
+                    // console.log("lonLat.longitude: " + lonLat.longitude);
                     longitude = lonLat.longitude;
                     latitude = lonLat.latitude;
                     paths.push([longitude, latitude]);
                 })
+                paths.push(path[1]);
                 console.log("paths: " + paths);
+                console.log("paths[0]: " + paths[0]);
 
                 let traveledPath = {
                     type: "polyline",
@@ -685,27 +693,27 @@
 
                 if (flight !== undefined) {
                     let traveledPath = [];
-                    if (flight.departure_airport_icao !== null) {
-                        let query = featureLayer.createQuery();
-                        query.where = "icao = '" + departure_airport_icao + "'";
-                        query.outFields = [ "longitude", "latitude"];
+//                     if (flight.departure_airport_icao !== null) {
+//                         let query = featureLayer.createQuery();
+//                         query.where = "icao = '" + departure_airport_icao + "'";
+//                         query.outFields = [ "longitude", "latitude"];
+//
+//                         let response = await airportFeatureLayer.queryFeatures(query);
+//                         console.log("**** response for airport query: " + response);
+//                         let feat = results.features;
+//                         console.log("**** features found for airport query: " + feat);
+//
+// <!--                        traveledPath.push();-->
+//                     }
 
-                        let response = await airportFeatureLayer.queryFeatures(query);
-                        console.log("**** response for airport query: " + response);
-                        let feat = results.features;
-                        console.log("**** features found for airport query: " + feat);
+                    console.log("quantity of path points for the flight: " + flight.path.length);
 
-<!--                        traveledPath.push();-->
-                    }
-
-                    console.log("quantity of paths for the flight: " + flight.path.length);
-
-                    flight.path.forEach(path => {
-                        console.log("path longitude, latitude: " + path.longitude + ", "+ path.latitude);
-                    })
+                    // flight.path.forEach(path => {
+                    //     console.log("path longitude, latitude: " + path.longitude + ", "+ path.latitude);
+                    // })
 
                     traveledPath.push(flight.path);
-                    traveledPath.push({longitude: x, latitude: y});
+                    traveledPath.push([x, y]);
 
                     console.log("traveledPath: " + traveledPath);
 
