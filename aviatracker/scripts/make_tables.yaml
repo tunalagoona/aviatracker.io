@@ -39,6 +39,11 @@ flight_paths:
     );
   "
 
+make_flight_paths_index:
+  "
+    CREATE INDEX flight_paths_select_unfinised ON flight_paths (icao24, finished);
+  "
+
 callsign_memo:
   "
     CREATE TABLE IF NOT EXISTS callsign_memo (
