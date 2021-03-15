@@ -38,7 +38,7 @@ def update_callsigns(self) -> None:
 
 @app.task(bind=True)
 def insert_states(self) -> None:
-    self.time_limit = 15
+    self.time_limit = 10
     logger.debug("Starting task insert_states")
     cur_time = int(time.time())
 

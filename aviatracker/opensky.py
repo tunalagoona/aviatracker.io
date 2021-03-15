@@ -25,7 +25,7 @@ class Opensky(object):
                 "{}{}".format(self.api_url, operation),
                 auth=self.auth,
                 params=params,  # type: ignore
-                timeout=20,
+                timeout=15,
             )
             if r.status_code == codes.ok:
                 logger.info("Successful connection to Opensky API.")
@@ -41,7 +41,7 @@ class Opensky(object):
         parameters = {"time": int(time_sec), "icao24": icao24}
         operation = "/states/all"
 
-        resp: Dict = self.get_from_opensky(parameters, operation)
+        resp: Optional[Dict] = self.get_from_opensky(parameters, operation)
 
         if resp is not None:
             request_time = resp["time"]
@@ -50,13 +50,13 @@ class Opensky(object):
                 states = [StateVector(*([request_time] + state)) for state in dirty_states]
                 return states
 
-    def get_flights_for_period(self, begin, period=3600) -> List[OpenskyFlight]:
+    def get_flights_for_period(self, begin, period=3600) -> Optional[List[OpenskyFlight]]:
         """Gets flights history for an hour interval"""
         end = begin + period
         parameters = {"begin": begin, "end": end}
         operation = "/flights/all"
 
-        resp: Dict = self.get_from_opensky(parameters, operation)
+        resp: Optional[Dict] = self.get_from_opensky(parameters, operation)
 
         if resp is not None:
             flights = [OpenskyFlight(**x) for x in resp]

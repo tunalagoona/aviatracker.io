@@ -24,11 +24,13 @@ app.conf.beat_schedule = {
     "every-23-hours-update-callsigns": {
         "task": "aviatracker.tasks.tasks.update_callsigns",
         "schedule": 900,
+        "options": {"queue": "celery"},
         "args": (),
     },
     "every-hour-update-stats": {
         "task": "aviatracker.tasks.tasks.update_stats",
         "schedule": 3600.0,
+        "options": {"queue": "celery"},
         "args": (),
     },
 }

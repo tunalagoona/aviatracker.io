@@ -15,6 +15,7 @@ params = common_conf.db_params
 
 
 def update_flight_paths():
+    start = time.time()
     with closing(DB(**params)) as db:
         with db:
             db.delete_outdated_paths()
@@ -63,8 +64,9 @@ def update_flight_paths():
                         )
 
                         db.insert_path(new_path)
-
-        logger.info("!!!!!!!!!!! path update succeeds, transaction committed")
+    finish = time.time()
+    delta = finish - start
+    logger.info(f"{delta} sec to update paths")
 
 
 def update_airport_stats():
