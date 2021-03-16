@@ -46,6 +46,12 @@ class DB:
                 extras.execute_values(curs, insert_query, airports, template)
                 logger.debug(f"Inserted {len(airports)} airports")
 
+                curs.execute("UPDATE airports SET icao = REPLACE (icao, '\"', '');")
+                curs.execute("UPDATE airports SET iata = REPLACE (iata, '\"', '');")
+                curs.execute("UPDATE airports SET name = REPLACE (name, '\"', '');")
+                curs.execute("UPDATE airports SET city = REPLACE (city, '\"', '');")
+                curs.execute("UPDATE airports SET country = REPLACE (country, '\"', '');")
+
     def insert_current_states(self, aircraft_states: List[StateVector]) -> None:
         with self.conn.cursor() as curs:
             """Row deletion can be implemented either by DELETE or by TRUNCATE TABLE.
