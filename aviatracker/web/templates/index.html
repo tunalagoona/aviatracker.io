@@ -100,12 +100,6 @@
                 }, {
                     name: "true_track",
                     type: "double"
-                }, {
-                    name: "est_arrival_airport",
-                    type: "string"
-                }, {
-                    name: "est_departure_airport",
-                    type: "string"
                 }
             ];
 
@@ -177,12 +171,6 @@
                     }, {
                         fieldName: "true_track",
                         label: "True track, DD"
-                    }, {
-                        fieldName: "est_arrival_airport",
-                        label: "Arrival airport (est)"
-                    }, {
-                        fieldName: "est_departure_airport",
-                        label: "Departure airport (est)"
                     }]
                 }],
             });
@@ -240,9 +228,7 @@
                     latitude: aircraft.latitude,
                     true_track: aircraft.true_track,
                     baro_altitude: aircraft.baro_altitude,
-                    velocity: aircraft.velocity,
-                    est_arrival_airport: aircraft.est_arrival_airport,
-                    est_departure_airport: aircraft.est_departure_airport
+                    velocity: aircraft.velocity
                 };
                 return new Graphic({
                     geometry: point,
@@ -282,9 +268,7 @@
                 latitude: 50,
                 true_track: 56,
                 baro_altitude: 0,
-                velocity: 0,
-                est_arrival_airport: "XXXX",
-                est_departure_airport: "XXXX"
+                velocity: 0
             };
 
             let graphics = aircraftToGraphics(aircraft);
@@ -649,22 +633,10 @@
 
             function pathToGraphics (path, icao) {
                 console.log("__Starting pathToGraphics__");
-                let paths = [];
-
-                path[0].forEach(lonLat => {
-                    // console.log("lonLat: " + lonLat);
-                    // console.log("lonLat.longitude: " + lonLat.longitude);
-                    longitude = lonLat.longitude;
-                    latitude = lonLat.latitude;
-                    paths.push([longitude, latitude]);
-                })
-                paths.push(path[1]);
-                console.log("paths: " + paths);
-                console.log("paths[0]: " + paths[0]);
 
                 let traveledPath = {
                     type: "polyline",
-                    paths: paths
+                    paths: path
                 };
 
                 let pathAttributes = {
@@ -690,29 +662,40 @@
                 console.log("flight icao: " + flight.icao24);
                 console.log("departure airport: " + flight.departure_airport_icao);
                 console.log("arrival airport: " + flight.arrival_airport_icao);
+                console.log("callsign: " + flight.callsign);
 
                 if (flight !== undefined) {
                     let traveledPath = [];
-//                     if (flight.departure_airport_icao !== null) {
-//                         let query = featureLayer.createQuery();
-//                         query.where = "icao = '" + departure_airport_icao + "'";
-//                         query.outFields = [ "longitude", "latitude"];
-//
-//                         let response = await airportFeatureLayer.queryFeatures(query);
-//                         console.log("**** response for airport query: " + response);
-//                         let feat = results.features;
-//                         console.log("**** features found for airport query: " + feat);
-//
-// <!--                        traveledPath.push();-->
-//                     }
+                    if (flight.departure_airport_icao !== null) {
+                        let query = {
+                            where: "icao = '" + departure_airport_icao + "'",
+                            outFields: [ "longitude", "latitude"],
+                            spatialRelationship: "intersects",
+                            returnGeometry: true,
+                        };
+
+                        console.log("query.where: " +  query.where);
+
+                        let response = await airportFeatureLayer.queryFeatures(query);
+                        console.log("**** response for airport query: ");
+                        console.log(response);
+                        let features = response.features;
+                        console.log("**** features found for airport query: ");
+                        console.log(features);
+
+<!--                        traveledPath.push();-->
+                    }
 
                     console.log("quantity of path points for the flight: " + flight.path.length);
 
-                    // flight.path.forEach(path => {
-                    //     console.log("path longitude, latitude: " + path.longitude + ", "+ path.latitude);
-                    // })
+                    flight.path.forEach(path => {
+                        if (path.longitude !== null && path.latitude !== null) {
+                            console.log("path.longitude: " + path.longitude);
+                            traveledPath.push([path.longitude, path.latitude]);
+                        }
+                    })
 
-                    traveledPath.push(flight.path);
+                    // traveledPath.push(flight.path);
                     traveledPath.push([x, y]);
 
                     console.log("traveledPath: " + traveledPath);
@@ -768,7 +751,6 @@
                                     return result.graphic.layer === featureLayer;
                                 })
                                 if (feature !== undefined) {
-                                    console.log("feature.length: " + feature.length);
                                     let graphic = feature[0].graphic;
                                     let attributes = graphic.attributes;
                                     let icao = attributes.icao24;
