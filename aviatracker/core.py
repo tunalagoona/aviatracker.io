@@ -40,11 +40,12 @@ def update_flight_paths():
                     }
                     path: str = json.dumps(current_location)
 
-                    airports = db.get_airports_for_callsign(callsign)
-                    if airports:
-                        arrival_airport_icao, departure_airport_icao = airports
-                    else:
-                        arrival_airport_icao, departure_airport_icao = None, None
+                    if callsign is not None:
+                        airports = db.get_airports_for_callsign(callsign)
+                        if airports:
+                            arrival_airport_icao, departure_airport_icao = airports
+                        else:
+                            arrival_airport_icao, departure_airport_icao = None, None
 
                     if unfinished_path:
                         last_update = unfinished_path["last_update"]
