@@ -360,13 +360,18 @@
                 symbol: traveledPathSymbol,
             };
 
+            let remainingPathsRenderer = {
+                type: "simple",
+                symbol: remainingPathSymbol,
+            };
+
             let remainingPathFeatureLayer = new FeatureLayer({
                 source: [remainingPathGraphic],
                 supportsEditing: true,
                 supportsAdd: true,
                 fields: fields,
                 objectIdField: "objectID",
-                renderer: pathsRenderer,
+                renderer: remainingPathsRenderer,
                 geometryType: "polyline",
                 spatialReference: {
                     wkid: 3857
@@ -422,7 +427,6 @@
                         objectIds: objectIds
                     });
                     console.log(res.features.length + " object(s) have been added");
-                    console.log(res.features[0]);
 
                     Object.keys(res.features[0]).forEach(key => {
                         console.log("res.features[0][key]: " +  res.features[0][key]);
@@ -658,6 +662,7 @@
                 let y = serverMessage[3];
 
                 let departure_airport_icao = flight.departure_airport_icao;
+                let arrival_airport_icao = flight.arrival_airport_icao;
 
                 console.log("flight icao: " + flight.icao24);
                 console.log("departure airport: " + flight.departure_airport_icao);
@@ -677,20 +682,47 @@
                         console.log("query.where: " +  query.where);
 
                         let response = await airportFeatureLayer.queryFeatures(query);
-                        console.log("**** response for airport query: ");
-                        console.log(response);
                         let features = response.features;
-                        console.log("**** features found for airport query: ");
-                        console.log(features);
-
-<!--                        traveledPath.push();-->
+                        if (features.length !== 0) {
+                            let long = features[0].attributes.longitude;
+                            let lat = features[0].attributes.latitude;
+                            console.log("departure airport coords: " + [long, lat]);
+                            traveledPath.push([long, lat]);
+                        }
                     }
 
+                    if (flight.arrival_airport_icao !== null) {
+                        let query = {
+                            where: "icao = '" + arrival_airport_icao + "'",
+                            outFields: [ "longitude", "latitude"],
+                            spatialRelationship: "intersects",
+                            returnGeometry: true,
+                        };
+
+                        console.log("query.where: " +  query.where);
+
+                        let response = await airportFeatureLayer.queryFeatures(query);
+                        let features = response.features;
+                        if (features.length !== 0) {
+                            let long = features[0].attributes.longitude;
+                            let lat = features[0].attributes.latitude;
+                            console.log("arrival airport coords: " + [long, lat]);
+
+                            let remainingPath = []
+                            remainingPath.push([long, lat]);
+                            remainingPath.push([x, y]);
+
+                            let remainingPathGraphic = pathToGraphics(remainingPath, flight.icao24);
+                            console.log("Let's draw the remaining path! =)");
+                            let addObjects = [];
+                            addObjects.push(remainingPathGraphic);
+                            await addFeatures(addObjects, remainingPathFeatureLayer);
+                        }
+                    }
                     console.log("quantity of path points for the flight: " + flight.path.length);
 
                     flight.path.forEach(path => {
                         if (path.longitude !== null && path.latitude !== null) {
-                            console.log("path.longitude: " + path.longitude);
                             traveledPath.push([path.longitude, path.latitude]);
                         }
                     })
@@ -703,7 +735,7 @@
                     let pathGraphic = pathToGraphics(traveledPath, flight.icao24);
 
                     console.log("Let's draw the path! =)");
-                    addObjects = [];
+                    let addObjects = [];
                     addObjects.push(pathGraphic);
                     await addFeatures(addObjects, traveledPathFeatureLayer);
                 }
@@ -736,6 +768,9 @@
 
                 view.whenLayerView(featureLayer).then(function (layerView) {
                     view.on("click", function (event) {
+
+                        removeFeatures([], traveledPathFeatureLayer);
+                        removeFeatures([], remainingPathFeatureLayer);
 
                         let screenPoint = {
                             x: event.x,
