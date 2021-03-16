@@ -27,7 +27,7 @@ def update_callsigns(self) -> None:
     logger.debug("Starting task update_callsigns")
     self.time_limit = 15
     api = Opensky()
-    flights: Optional[List[OpenskyFlight]] = api.get_flights_for_period(int(time.time()) - 172800)
+    flights: Optional[List[OpenskyFlight]] = api.get_flights_for_period(int(time.time()) - 259200)
 
     if flights:
         logger.debug(f"Received {len(flights)} flights")
