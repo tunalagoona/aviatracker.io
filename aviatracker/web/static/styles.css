@@ -77,11 +77,12 @@ h1 {
     color: white;
 }
 .footer {
-    text-align: center;
+    text-align: left;
     font-size: 8px;
     color: grey;
     position: absolute;
     bottom: 5px;
+    margin-left: 20px;
 }
 .subtitle {
     font-size: 18px;
