@@ -54,6 +54,10 @@ def send_airports(message) -> None:
             current_flight_message = [["flight"], current_flight, [x], [y]]
             logger.info(f"server sends paths_message: {current_flight_message}")
             socketio.send(current_flight_message)
+    elif message[0] == "path-update":
+        current_flight: Optional[Dict] = fetch_current_flight(message[1], common_conf.db_params)
+        if current_flight:
+            socketio.send(["path-update", current_flight])
     else:
         airports: Optional[List[Dict]] = fetch_airports(common_conf.db_params)
         if len(airports) != 0:
