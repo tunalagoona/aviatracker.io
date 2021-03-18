@@ -335,7 +335,7 @@
                 type: "simple-line",
                 color: [226, 119, 40], // Orange
                 width: 2,
-                style: "solid"
+                style: "short-dot"
             };
 
             const traveledPathGraphic = new Graphic({
@@ -451,11 +451,8 @@
                         return deleteEdits;
                     }
                 }
-                let edits = await constructDeletes(graphics);
-                // console.log("removeFeatures: edits = " + edits);
-                // console.log(edits);
+                let edits = await constructDeletes(graphics)
                 await applyEditsToLayer(edits, layer);
-                // console.log("delete finished");
                 addStarts = Date.now();
             }
 
@@ -654,20 +651,19 @@
                 })
             }
 
-            async function renderFlight (serverMessage) {
-                let flight = serverMessage[1];
-                let x = serverMessage[2];
-                let y = serverMessage[3];
+            async function renderFlight (flight, x, y) {
+                console.log("flight:");
+                console.log(flight);
 
-                let departure_airport_icao = flight.departure_airport_icao;
-                let arrival_airport_icao = flight.arrival_airport_icao;
+                if (flight !== undefined && flight !== null) {
+                    let departure_airport_icao = flight.departure_airport_icao;
+                    // let arrival_airport_icao = flight.arrival_airport_icao;
 
-                console.log("flight icao: " + flight.icao24);
-                console.log("departure airport: " + flight.departure_airport_icao);
-                console.log("arrival airport: " + flight.arrival_airport_icao);
-                console.log("callsign: " + flight.callsign);
+                    console.log("flight icao: " + flight.icao24);
+                    console.log("callsign: " + flight.callsign);
+                    console.log("departure airport: " + flight.departure_airport_icao);
+                    console.log("arrival airport: " + flight.arrival_airport_icao);
 
-                if (flight !== undefined) {
                     let traveledPath = [];
                     if (flight.departure_airport_icao !== null) {
                         let query = {
@@ -689,34 +685,34 @@
                         }
                     }
 
-                    if (flight.arrival_airport_icao !== null) {
-                        let query = {
-                            where: "icao = '" + arrival_airport_icao + "'",
-                            outFields: [ "longitude", "latitude"],
-                            spatialRelationship: "intersects",
-                            returnGeometry: true,
-                        };
-
-                        console.log("query.where: " +  query.where);
-
-                        let response = await airportFeatureLayer.queryFeatures(query);
-                        let features = response.features;
-                        if (features.length !== 0) {
-                            let long = features[0].attributes.longitude;
-                            let lat = features[0].attributes.latitude;
-                            console.log("arrival airport coords: " + [long, lat]);
-
-                            let remainingPath = []
-                            remainingPath.push([long, lat]);
-                            remainingPath.push([x, y]);
-
-                            let remainingPathGraphic = pathToGraphics(remainingPath, flight.icao24);
-                            console.log("Let's draw the remaining path! =)");
-                            let addObjects = [];
-                            addObjects.push(remainingPathGraphic);
-                            await addFeatures(addObjects, remainingPathFeatureLayer);
-                        }
-                    }
+                    // if (flight.arrival_airport_icao !== null) {
+                    //     let query = {
+                    //         where: "icao = '" + arrival_airport_icao + "'",
+                    //         outFields: [ "longitude", "latitude"],
+                    //         spatialRelationship: "intersects",
+                    //         returnGeometry: true,
+                    //     };
+                    //
+                    //     console.log("query.where: " +  query.where);
+                    //
+                    //     let response = await airportFeatureLayer.queryFeatures(query);
+                    //     let features = response.features;
+                    //     if (features.length !== 0) {
+                    //         let long = features[0].attributes.longitude;
+                    //         let lat = features[0].attributes.latitude;
+                    //         console.log("arrival airport coords: " + [long, lat]);
+                    //
+                    //         let remainingPath = []
+                    //         remainingPath.push([long, lat]);
+                    //         remainingPath.push([x, y]);
+                    //
+                    //         let remainingPathGraphic = pathToGraphics(remainingPath, flight.icao24);
+                    //         console.log("Let's draw the remaining path! =)");
+                    //         let addObjects = [];
+                    //         addObjects.push(remainingPathGraphic);
+                    //         await addFeatures(addObjects, remainingPathFeatureLayer);
+                    //     }
+                    // }
                     console.log("quantity of path points for the flight: " + flight.path.length);
 
                     flight.path.forEach(path => {
@@ -725,8 +721,9 @@
                         }
                     })
 
-                    // traveledPath.push(flight.path);
-                    traveledPath.push([x, y]);
+                    if (x !== null && y !== null) {
+                        traveledPath.push([x, y]);
+                    }
 
                     console.log("traveledPath: " + traveledPath);
 
@@ -735,12 +732,9 @@
                     console.log("Let's draw the path! =)");
                     let addObjects = [];
                     addObjects.push(pathGraphic);
+                    await removeFeatures([], traveledPathFeatureLayer);
                     await addFeatures(addObjects, traveledPathFeatureLayer);
                 }
-            }
-
-            function updatePath (icao24) {
-
             }
 
             $(document).ready(function(){
@@ -759,12 +753,13 @@
                             if (data[0][0] === "flight") {
                                 console.log("received flight from the server: " + data);
                                 if (data[1] !== null) {
-                                    renderFlight(data);
+                                    renderFlight(data[1], data[2], data[3]);
                                 }
                             } else {
-                                if (data[0] === "icao24-update") {
-                                    console.log("client received icao24-update");
-                                    updatePath(data[1]);
+                                if (data[0] === "path-update") {
+                                    console.log("client received path-update. Flight:");
+                                    console.log(data[1]);
+                                    renderFlight(data[1], null, null);
                                 } else {
                                     console.log("received current states of aircraft: ");
                                     updateAircraft(data);
@@ -778,7 +773,7 @@
                     view.on("click", function (event) {
 
                         removeFeatures([], traveledPathFeatureLayer);
-                        removeFeatures([], remainingPathFeatureLayer);
+                        // removeFeatures([], remainingPathFeatureLayer);
 
                         let screenPoint = {
                             x: event.x,
@@ -821,11 +816,13 @@
                         console.log("time interval update");
                         console.log(features[0].geometry.paths);
                         let icao = features[0].attributes.icao24;
-                        socket.send(["icao24-update", icao])
+                        let message = ["path-update", icao]
+                        socket.send(["path-update", icao]);
+                        console.log("icao: " + message[1]);
                     }
                 }
 
-                setInterval (queryPath, 10000);
+                setInterval (queryPath, 4000);
             });
         })
 
