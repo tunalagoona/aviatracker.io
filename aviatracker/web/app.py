@@ -120,7 +120,7 @@ def fetch_paths(icao, params: Dict[str, Any]) -> Optional[List[Dict]]:
 def fetch_current_flight(icao, params: Dict[str, Any]) -> Optional[Dict]:
     with closing(DB(**params)) as db:
         with db:
-            flight: Optional[List[Dict]] = db.find_unfinished_path_for_aircraft(icao)
+            flight: Optional[Dict] = db.find_unfinished_path_for_aircraft(icao)
             if flight:
                 return flight
 

@@ -134,7 +134,7 @@ class DB:
 
     def upsert_callsigns(self, flights: List[OpenskyFlight]) -> None:
         for flight in flights:
-            if flight.callsign:
+            if len(flight.callsign) != 0:
                 self.upsert_one_callsign(
                     flight.callsign.strip().upper(),
                     flight.estArrivalAirport,
