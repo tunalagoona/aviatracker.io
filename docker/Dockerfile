@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-WORKDIR /flight-tracker
+WORKDIR /aviatracker.io
 
 RUN apt-get update && apt-get install -y python3 python3-pip
 RUN apt-get update && apt-get install -y libpq-dev
@@ -18,6 +18,8 @@ RUN pip3 install -r requirements.txt
 RUN mkdir logs
 RUN mkdir beat
 
-COPY flighttracker flighttracker
+COPY aviatracker aviatracker
 COPY logging.yaml .
-COPY docker/resource/launcher.sh /aviatracker/
+COPY docker/resource/launcher.sh /aviatracker.io/
+COPY docker/resource/init_launcher.sh /aviatracker.io/
+COPY extra/airports.txt /aviatracker.io/extra/airports.txt
