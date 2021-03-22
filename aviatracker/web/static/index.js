@@ -21,6 +21,10 @@ require([
     };
     let addStarts;
 
+    const url = document.getElementById('url');
+    const urlAttr= url.getAttribute('url');
+    console.log("urlAttr: " + urlAttr);
+
     let map = new Map({
         basemap: "dark-gray-vector"
     });
@@ -46,7 +50,7 @@ require([
 
     let aircraftMarker = {
         type: "picture-marker",
-        url: "{{  url_for('static', filename='icon.svg') }}",
+        url: urlAttr,
         angle: 0
     };
 
