@@ -23,7 +23,6 @@ require([
 
     const url = document.getElementById('url');
     const urlAttr= url.getAttribute('url');
-    console.log("urlAttr: " + urlAttr);
 
     let map = new Map({
         basemap: "dark-gray-vector"
