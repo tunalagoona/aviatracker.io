@@ -25,8 +25,6 @@ def update_flight_paths() -> None:
             logger.info(f"received {len(states)} states for paths update")
 
             if len(states) > 0:
-                # """Ordering of the data helps to avoid deadLocks on path updates."""
-                # states = sorted(states, key=lambda k: k['icao24'])
                 for state in states:
                     icao = state["icao24"]
                     callsign = state["callsign"]
@@ -42,7 +40,7 @@ def update_flight_paths() -> None:
 
                     if callsign is not None:
                         airports = db.get_airports_for_callsign(callsign)
-                        if airports:
+                        if airports is not None:
                             arrival_airport_icao, departure_airport_icao = airports
                         else:
                             arrival_airport_icao, departure_airport_icao = None, None

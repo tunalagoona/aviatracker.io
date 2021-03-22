@@ -5,7 +5,7 @@ import os
 import yaml
 
 
-def setup_logging(level=logging.INFO, name="root") -> logging.Logger:
+def setup_logging(level=logging.INFO, name: str = "root") -> logging.Logger:
     script_dir = os.path.abspath(__file__ + "/../../")
     rel_path = "logging.yaml"
     path = os.path.join(script_dir, rel_path)

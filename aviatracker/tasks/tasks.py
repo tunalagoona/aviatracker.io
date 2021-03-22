@@ -18,13 +18,13 @@ logger = get_task_logger(__name__)
 
 
 @after_setup_task_logger.connect
-def setup_task_logger(logger: logging.Logger, *args, **kwargs) -> None:
+def setup_task_logger(logger: logging.Logger, *args, **kwargs) -> None:  # type: ignore
     for handler in logger.handlers:
         handler.setFormatter(TaskFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 
 
 @app.task(bind=True)
-def update_callsigns(self) -> None:
+def update_callsigns(self) -> None:  # type: ignore
     logger.debug("Starting task update_callsigns")
     self.time_limit = 15
     api = Opensky()
@@ -38,7 +38,7 @@ def update_callsigns(self) -> None:
 
 
 @app.task(bind=True)
-def insert_states(self) -> None:
+def insert_states(self) -> None:  # type: ignore
     self.time_limit = 10
     logger.debug("Starting task insert_states")
     cur_time = int(time.time())
@@ -46,7 +46,7 @@ def insert_states(self) -> None:
     api = Opensky()
     try:
         logger.debug(f"A request has been sent to API for the timestamp: {cur_time}")
-        states: List[StateVector] or None = api.get_current_states(time_sec=cur_time)
+        states: Optional[List[StateVector]] = api.get_current_states(time_sec=cur_time)
         logger.debug(f"A response has been received from API for the timestamp: {cur_time}")
         if states:
             logger.debug(f"received {len(states)} states")
@@ -67,7 +67,7 @@ def insert_states(self) -> None:
 
 
 @app.task(bind=True)
-def update_paths(self) -> None:
+def update_paths(self) -> None:  # type: ignore
     self.time_limit = 10
     try:
         logger.debug("Starting flight paths update")
@@ -77,7 +77,7 @@ def update_paths(self) -> None:
 
 
 @app.task(bind=True)
-def update_stats(self) -> None:
+def update_stats(self) -> None:  # type: ignore
     self.time_limit = 10
     try:
         with closing(DB(**common_conf.db_params)) as db:

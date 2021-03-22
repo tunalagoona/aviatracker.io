@@ -28,12 +28,12 @@ socketio = SocketIO(
 
 
 @app.route("/")
-def index():
+def index() -> str:
     return render_template("index.html")
 
 
 @app.route("/about", methods=["GET"])
-def about():
+def about() -> str:
     return render_template("about.html")
 
 
@@ -43,7 +43,7 @@ def connect() -> None:
 
 
 @socketio.on("message")
-def send_airports(message) -> None:
+def send_airports(message: List) -> None:
     logger.info(f"server received message: {message}")
     if message[0] == "icao24":
         icao = message[1]
@@ -55,12 +55,12 @@ def send_airports(message) -> None:
             logger.info(f"server sends paths_message: {current_flight_message}")
             socketio.send(current_flight_message)
     elif message[0] == "path-update":
-        current_flight: Optional[Dict] = fetch_current_flight(message[1], common_conf.db_params)
-        if current_flight:
-            socketio.send(["path-update", current_flight])
+        flight: Optional[Dict] = fetch_current_flight(message[1], common_conf.db_params)
+        if flight:
+            socketio.send(["path-update", flight])
     else:
         airports: Optional[List[Dict]] = fetch_airports(common_conf.db_params)
-        if len(airports) != 0:
+        if airports is not None:
             airports_message = ["airports", airports]
             socketio.send(airports_message)
 
@@ -85,7 +85,7 @@ def fetch_aircraft_states(params: Dict[str, Any]) -> None:
         while True:
             with db:
                 vectors: Optional[List[Dict]] = db.get_current_states()
-            if len(vectors) != 0:
+            if vectors is not None:
                 for vector in vectors:
                     airports: Optional[Tuple[str, str]] = db.get_airports_for_callsign(vector["callsign"])
                     # logger.info(f"airports for callsign {vector['callsign']}: {airports}")
@@ -109,20 +109,24 @@ def broadcast_states() -> None:
         time.sleep(1)
 
 
-def fetch_paths(icao, params: Dict[str, Any]) -> Optional[List[Dict]]:
+def fetch_paths(icao: str, params: Dict[str, Any]) -> Optional[List[Dict]]:
     with closing(DB(**params)) as db:
         with db:
             flights: Optional[List[Dict]] = db.get_all_paths_for_icao(icao)
             if flights:
                 return flights
+            else:
+                return None
 
 
-def fetch_current_flight(icao, params: Dict[str, Any]) -> Optional[Dict]:
+def fetch_current_flight(icao: str, params: Dict[str, Any]) -> Optional[Dict]:
     with closing(DB(**params)) as db:
         with db:
             flight: Optional[Dict] = db.find_unfinished_path_for_aircraft(icao)
             if flight:
                 return flight
+            else:
+                return None
 
 
 def start_app() -> None:
