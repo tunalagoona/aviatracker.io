@@ -14,7 +14,7 @@ logger = logging.getLogger()
 params = common_conf.db_params
 
 
-def update_flight_paths():
+def update_flight_paths() -> None:
     start = time.time()
     with closing(DB(**params)) as db:
         with db:
@@ -71,7 +71,7 @@ def update_flight_paths():
     logger.info(f"{delta} sec to update paths")
 
 
-def update_airport_stats():
+def update_airport_stats() -> None:
     with closing(DB(**params)) as db:
         with db:
             db.delete_outdated_stats()

@@ -13,7 +13,7 @@ logger = logging.getLogger()
 
 
 class Opensky(object):
-    def __init__(self, username: Optional = None, password: Optional = None) -> None:
+    def __init__(self, username: Optional[str] = None, password: Optional[str] = None) -> None:
         if username is None or password is None:
             username, password = common_conf.opensky_user, common_conf.opensky_pass
         self.auth = (username, password)
@@ -50,7 +50,7 @@ class Opensky(object):
                 states = [StateVector(*([request_time] + state)) for state in dirty_states]
                 return states
 
-    def get_flights_for_period(self, begin, period=3600) -> Optional[List[OpenskyFlight]]:
+    def get_flights_for_period(self, begin: int, period=3600) -> Optional[List[OpenskyFlight]]:
         """Gets flights history for an hour interval"""
         end = begin + period
         parameters = {"begin": begin, "end": end}
@@ -61,3 +61,5 @@ class Opensky(object):
         if resp is not None:
             flights = [OpenskyFlight(**x) for x in resp]
             return flights
+        else:
+            return

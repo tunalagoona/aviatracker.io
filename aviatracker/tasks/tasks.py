@@ -1,3 +1,4 @@
+import logging
 import sys
 import time
 from contextlib import closing
@@ -17,7 +18,7 @@ logger = get_task_logger(__name__)
 
 
 @after_setup_task_logger.connect
-def setup_task_logger(logger, **kwargs) -> None:
+def setup_task_logger(logger: logging.Logger, *args, **kwargs) -> None:
     for handler in logger.handlers:
         handler.setFormatter(TaskFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 

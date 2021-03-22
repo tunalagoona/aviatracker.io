@@ -5,7 +5,7 @@ import yaml
 
 
 class Config:
-    def __init__(self):
+    def __init__(self) -> None:
         path = os.path.join(os.path.abspath(__file__ + "/../../"), "config/config.yaml")
 
         with open(path, "r") as config:

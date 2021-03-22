@@ -2,7 +2,7 @@ import logging
 import os
 from contextlib import closing
 import time
-from typing import List
+from typing import List, Optional
 
 import click
 import yaml
@@ -16,7 +16,7 @@ logger = logging.getLogger()
 
 
 @click.group()
-def cli():
+def cli() -> None:
     pass
 
 
@@ -60,7 +60,7 @@ def fill_callsigns() -> None:
 
         while begin < end:
             with db:
-                flights: List[OpenskyFlight] = api.get_flights_for_period(begin)
+                flights: Optional[List[OpenskyFlight]] = api.get_flights_for_period(begin)
                 if flights:
                     db.upsert_callsigns(flights)
                     begin += 3600
