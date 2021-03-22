@@ -17,9 +17,7 @@ class Config:
             self.db_host = parsed_yaml_file["db"]["host"]
             self.db_port = parsed_yaml_file["db"]["port"]
 
-            self.websocket_allowed_origin = parsed_yaml_file["websocket"][
-                "allowed_origin"
-            ]
+            self.websocket_allowed_origin = parsed_yaml_file["websocket"]["allowed_origin"]
 
             self.opensky_user = parsed_yaml_file["opensky"]["user"]
             self.opensky_pass = parsed_yaml_file["opensky"]["pass"]

@@ -41,7 +41,7 @@ flight_paths:
 
 make_flight_paths_index:
   "
-    CREATE INDEX flight_paths_select_unfinised ON flight_paths (icao24, finished);
+    CREATE INDEX IF NOT EXISTS flight_paths_select_unfinised ON flight_paths (icao24, finished);
   "
 
 callsign_memo:
@@ -89,7 +89,7 @@ airports:
       timezone VARCHAR,
       dst VARCHAR,
       tz_database_time_zone VARCHAR,
-      type VARCHAR,
+      item_type VARCHAR,
       source VARCHAR
     );
   "

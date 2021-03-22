@@ -14,7 +14,8 @@ from aviatracker.database import (
     FlightAirportInfo,
     FlightPath,
     StateVector,
-    OpenskyFlight)
+    OpenskyFlight,
+)
 
 from aviatracker.opensky import Opensky
 
@@ -33,16 +34,15 @@ class DB:
 
     def set_timezone(self):
         with self.conn.cursor() as curs:
-            curs.execute(
-                "SET timezone = 0;"
-            )
+            curs.execute("SET timezone = 0;")
 
-    def insert_airports(self, airports: List[Airport]) -> None:
+    def insert_airports(self, airports: List[Dict]) -> None:
+        logger.info(f"airports: {airports[0]}")
         with self.conn:
             with self.conn.cursor() as curs:
                 columns_str, values_str = column_value_to_str(Airport._fields)
                 insert_query = f"INSERT INTO airports ({columns_str}) VALUES %s"
-                template = f"({columns_str})"
+                template = f"({values_str})"
                 extras.execute_values(curs, insert_query, airports, template)
                 logger.debug(f"Inserted {len(airports)} airports")
 
@@ -58,9 +58,7 @@ class DB:
             Though the DELETE option requires VACUUM to remove dead row versions,
             it is still preferred in our context as TRUNCATE would violate MVCC semantics
             and hinder parallel requests to access current states"""
-            curs.execute(
-                f"DELETE FROM current_states;"
-            )
+            curs.execute(f"DELETE FROM current_states;")
 
             resp_time: int = getattr(aircraft_states[0], "request_time")
 
@@ -71,8 +69,7 @@ class DB:
                 row: Dict = state._asdict()
 
                 curs.execute(
-                    f"INSERT INTO current_states ({columns_str}) VALUES ({values_str}) "
-                    f"ON CONFLICT DO NOTHING",
+                    f"INSERT INTO current_states ({columns_str}) VALUES ({values_str}) " f"ON CONFLICT DO NOTHING",
                     row,
                 )
             logger.debug(f"Inserted {len(aircraft_states)} aircraft states for the timestamp {resp_time}")
@@ -96,10 +93,7 @@ class DB:
         columns_str, values_str = column_value_to_str(path._fields)
         path = path._asdict()
         with self.conn.cursor() as curs:
-            curs.execute(
-                f"INSERT INTO flight_paths ({columns_str}) VALUES ({values_str})",
-                path
-            )
+            curs.execute(f"INSERT INTO flight_paths ({columns_str}) VALUES ({values_str})", path)
         insert_path_finish = time.time()
         delta = insert_path_finish - insert_path_start
         # logger.info(f"{int(delta*1000)} ms to execute insert_path")
@@ -125,7 +119,8 @@ class DB:
             time_now = int(time.time())
             curs.execute(
                 f"UPDATE flight_paths SET finished = True, finished_at = %s WHERE finished = False "
-                f"AND %s - last_update > 1800", (time_now, time_now)
+                f"AND %s - last_update > 1800",
+                (time_now, time_now),
             )
         update_paths_finish = time.time()
         delta = update_paths_finish - update_paths_start
@@ -134,18 +129,14 @@ class DB:
 
     def upsert_callsigns(self, flights: List[OpenskyFlight]) -> None:
         for flight in flights:
-            if len(flight.callsign) != 0:
+            if flight.callsign is not None:
                 self.upsert_one_callsign(
-                    flight.callsign.strip().upper(),
-                    flight.estArrivalAirport,
-                    flight.estDepartureAirport
+                    flight.callsign.strip().upper(), flight.estArrivalAirport, flight.estDepartureAirport
                 )
 
     def upsert_one_callsign(self, callsign, arrival_airport, departure_airport):
         with self.conn.cursor() as curs:
-            curs.execute(
-                f"SELECT * FROM callsign_memo WHERE callsign = %s", (callsign,)
-            )
+            curs.execute(f"SELECT * FROM callsign_memo WHERE callsign = %s", (callsign,))
             record = curs.fetchone()
             if record:
                 record = CallsignMemo(*record[1:])
@@ -153,28 +144,25 @@ class DB:
                     curs.execute(
                         f"UPDATE callsign_memo SET est_arrival_airport = %s, est_departure_airport = %s "
                         f"WHERE callsign = %s ",
-                        (arrival_airport, departure_airport, callsign)
+                        (arrival_airport, departure_airport, callsign),
                     )
             else:
                 curs.execute(
                     f"INSERT INTO callsign_memo (callsign, est_arrival_airport, est_departure_airport)"
-                    f"VALUES (%s, %s, %s)", (callsign, arrival_airport, departure_airport)
+                    f"VALUES (%s, %s, %s)",
+                    (callsign, arrival_airport, departure_airport),
                 )
 
     def get_arrival_airport(self, callsign):
         with self.conn.cursor() as curs:
-            curs.execute(
-                "SELECT est_arrival_airport FROM callsign_memo WHERE callsign = %s", (callsign,)
-            )
+            curs.execute("SELECT est_arrival_airport FROM callsign_memo WHERE callsign = %s", (callsign,))
             arr_airport = curs.fetchone()
             return arr_airport
 
     def find_unfinished_path_for_aircraft(self, icao) -> Optional[Dict]:
         unfinished_path_start = time.time()
         with self.conn.cursor() as curs:
-            curs.execute(
-                "SELECT * FROM flight_paths WHERE icao24 = %s AND finished = False", (icao,)
-            )
+            curs.execute("SELECT * FROM flight_paths WHERE icao24 = %s AND finished = False", (icao,))
             record = curs.fetchone()
             unfinished_path_finish = time.time()
             delta = unfinished_path_finish - unfinished_path_start
@@ -196,8 +184,8 @@ class DB:
         get_airports_start = time.time()
         with self.conn.cursor() as curs:
             curs.execute(
-                "SELECT est_arrival_airport, est_departure_airport FROM callsign_memo "
-                "WHERE callsign = %s", (callsign,)
+                "SELECT est_arrival_airport, est_departure_airport FROM callsign_memo " "WHERE callsign = %s",
+                (callsign,),
             )
             coords = curs.fetchone()
             get_airports_finish = time.time()
@@ -215,7 +203,7 @@ class DB:
                     "UPDATE flight_paths "
                     "SET path = path::jsonb || %s::jsonb, last_update = %s "
                     "WHERE icao24 = %s AND last_update = %s",
-                    (path_travelled, new_last_update, icao, old_last_update)
+                    (path_travelled, new_last_update, icao, old_last_update),
                 )
             else:
                 curs.execute(
@@ -223,7 +211,7 @@ class DB:
                     "SET path = path::jsonb || %s::jsonb, last_update = %s, "
                     "departure_airport_icao = %s, arrival_airport_icao = %s "
                     "WHERE icao24 = %s AND last_update = %s",
-                    (path_travelled, new_last_update, dep_airp, arr_airp, icao, old_last_update)
+                    (path_travelled, new_last_update, dep_airp, arr_airp, icao, old_last_update),
                 )
         update_unfinished_finish = time.time()
         delta = update_unfinished_finish - update_unfinished_start
@@ -231,10 +219,7 @@ class DB:
 
     def delete_outdated_stats(self) -> None:
         with self.conn.cursor() as curs:
-            curs.execute(
-                "DELETE FROM airport_stats "
-                "WHERE now() - the_date > interval '1 month' "
-            )
+            curs.execute("DELETE FROM airport_stats " "WHERE now() - the_date > interval '1 month' ")
 
     def update_stats_for_arrival_airport(self, airport: str, day: str) -> None:
         with self.conn.cursor() as curs:
@@ -256,10 +241,7 @@ class DB:
 
     def get_stats_for_airport(self, airport: str, update_day: str) -> Optional[AirportStats]:
         with self.conn.cursor() as curs:
-            curs.execute(
-                "SELECT * FROM airport_stats WHERE airport_icao = %s AND the_date = %s",
-                (airport, update_day)
-            )
+            curs.execute("SELECT * FROM airport_stats WHERE airport_icao = %s AND the_date = %s", (airport, update_day))
             stats = curs.fetchone()
             if stats:
                 stats = AirportStats(*stats[1:])
@@ -300,15 +282,11 @@ class DB:
 
     def update_airport_stats_last_update(self, last_update):
         with self.conn.cursor() as curs:
-            curs.execute(
-                f"INSERT INTO airport_stats_last_update (last_stats_update_time) VALUES (%s)", (last_update,)
-            )
+            curs.execute(f"INSERT INTO airport_stats_last_update (last_stats_update_time) VALUES (%s)", (last_update,))
 
     def get_stats_last_update(self) -> int:
         with self.conn.cursor() as curs:
-            curs.execute(
-                "SELECT MAX(last_stats_update_time) FROM airport_stats_last_update;"
-            )
+            curs.execute("SELECT MAX(last_stats_update_time) FROM airport_stats_last_update;")
             last_update = curs.fetchone()[0]
             if last_update:
                 return last_update
@@ -317,17 +295,13 @@ class DB:
 
     def get_not_considered_paths(self, last_update) -> List[Tuple]:
         with self.conn.cursor() as curs:
-            curs.execute(
-                "SELECT * FROM flight_paths WHERE last_update > %s;", (last_update,)
-            )
+            curs.execute("SELECT * FROM flight_paths WHERE last_update > %s;", (last_update,))
             paths = curs.fetchall()
             return paths
 
     def get_all_airports(self) -> Optional[List[Dict]]:
         with self.conn.cursor() as curs:
-            curs.execute(
-                "SELECT * FROM airports;"
-            )
+            curs.execute("SELECT * FROM airports;")
             response = curs.fetchall()
             if response:
                 airports = []
@@ -337,10 +311,7 @@ class DB:
 
     def get_all_paths_for_icao(self, icao) -> Optional[List[Dict]]:
         with self.conn.cursor() as curs:
-            curs.execute(
-                "SELECT * FROM flight_paths "
-                "WHERE icao24 = %s", (icao,)
-            )
+            curs.execute("SELECT * FROM flight_paths " "WHERE icao24 = %s", (icao,))
             response = curs.fetchall()
             flights = []
             if response:

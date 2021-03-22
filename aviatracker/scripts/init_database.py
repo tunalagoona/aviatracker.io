@@ -31,7 +31,7 @@ def make_tables() -> None:
 
             with open(path, "r") as f:
                 scripts = yaml.load(f, Loader=yaml.FullLoader)
-                for key in scripts.keys:
+                for key in scripts.keys():
                     db.execute_script(scripts[key])
 
 
@@ -42,7 +42,7 @@ def fill_airports(file: str) -> None:
         values = [line.split(",") for line in f.readlines()]
         airports = []
         for value in values:
-            airports.append(Airport(*value))
+            airports.append(Airport(*value)._asdict())
 
     with closing(DB(**common_conf.db_params)) as db:
         with db:
@@ -55,10 +55,10 @@ def fill_callsigns() -> None:
     There is a delay of when finished flights appear in /flights/all"""
     api = Opensky()
     with closing(DB(**common_conf.db_params)) as db:
-        yesterday = int(time.time()) - 86400  # 1 day ago
-        begin = yesterday - 1209600  # 2 weeks + 1 day ago
+        end = int(time.time()) - 17280  # 2 days ago
+        begin = end - 604800  # 1 week before the end
 
-        while begin < yesterday:
+        while begin < end:
             with db:
                 flights: List[OpenskyFlight] = api.get_flights_for_period(begin)
                 if flights:

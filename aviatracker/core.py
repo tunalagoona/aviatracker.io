@@ -49,8 +49,9 @@ def update_flight_paths():
 
                     if unfinished_path:
                         last_update = unfinished_path["last_update"]
-                        db.update_unfinished_path(icao, last_update, path, update_time,
-                                                  arrival_airport_icao, departure_airport_icao)
+                        db.update_unfinished_path(
+                            icao, last_update, path, update_time, arrival_airport_icao, departure_airport_icao
+                        )
                     else:
                         path = json.dumps([current_location])
                         new_path = FlightPath(
@@ -61,7 +62,7 @@ def update_flight_paths():
                             arrival_airport_icao=arrival_airport_icao,
                             path=path,
                             finished=False,
-                            finished_at=0
+                            finished_at=0,
                         )
 
                         db.insert_path(new_path)
@@ -85,7 +86,7 @@ def update_airport_stats():
             for path in not_considered_paths:
                 path = FlightPath(*path[1:])
                 update = path.last_update
-                update_day = datetime.utcfromtimestamp(update).strftime('%Y-%m-%d')
+                update_day = datetime.utcfromtimestamp(update).strftime("%Y-%m-%d")
 
                 arrival_airport = path.arrival_airport_icao
                 if arrival_airport:

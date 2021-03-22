@@ -22,4 +22,3 @@ COPY aviatracker aviatracker
 COPY logging.yaml .
 COPY docker/resource/launcher.sh /aviatracker.io/
 COPY docker/resource/init_launcher.sh /aviatracker.io/
-COPY extra/airports.txt /aviatracker.io/extra/airports.txt

@@ -34,7 +34,7 @@ FlightPath = namedtuple(
         "arrival_airport_icao",
         "path",
         "finished",
-        "finished_at"
+        "finished_at",
     ],
 )
 
@@ -60,32 +60,14 @@ Airport = namedtuple(
 
 FlightAirportInfo = namedtuple(
     "FlightAirportInfo",
-    [
-        "icao24",
-        "estDepartureAirport",
-        "estArrivalAirport",
-        "estArrivalTime"
-    ],
+    ["icao24", "estDepartureAirport", "estArrivalAirport", "estArrivalTime"],
 )
 
 AirportStats = namedtuple(
-    "AirportStats",
-    [
-        "airport_icao",
-        "the_date",
-        "airplane_quantity_arrivals",
-        "airplane_quantity_departures"
-    ]
+    "AirportStats", ["airport_icao", "the_date", "airplane_quantity_arrivals", "airplane_quantity_departures"]
 )
 
-CallsignMemo = namedtuple(
-    "CallsignMemo",
-    [
-        "callsign",
-        "arrival_airport",
-        "departure_airport"
-    ]
-)
+CallsignMemo = namedtuple("CallsignMemo", ["callsign", "arrival_airport", "departure_airport"])
 
 OpenskyFlight = namedtuple(
     "OpenskyFlight",
@@ -101,6 +83,6 @@ OpenskyFlight = namedtuple(
         "estArrivalAirportHorizDistance",
         "estArrivalAirportVertDistance",
         "departureAirportCandidatesCount",
-        "arrivalAirportCandidatesCount"
-    ]
+        "arrivalAirportCandidatesCount",
+    ],
 )
