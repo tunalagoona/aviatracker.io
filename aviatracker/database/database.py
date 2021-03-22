@@ -74,8 +74,8 @@ class DB:
                 )
             logger.debug(f"Inserted {len(aircraft_states)} aircraft states for the timestamp {resp_time}")
 
-    def get_current_states(self) -> List[Optional[Dict]]:
-        get_states_start = time.time()
+    def get_current_states(self) -> Optional[List[Dict]]:
+        # get_states_start = time.time()
         with self.conn.cursor() as curs:
             curs.execute("SELECT * FROM current_states")
             aircraft_states = curs.fetchall()
@@ -83,10 +83,12 @@ class DB:
             if len(aircraft_states) != 0:
                 for state in aircraft_states:
                     states.append(StateVector(*state[1:])._asdict())
-            get_states_finish = time.time()
-            delta = get_states_finish - get_states_start
-            # logger.info(f"{int(delta*1000)} ms to SELECT * FROM current_states")
-            return states
+                # get_states_finish = time.time()
+                # delta = get_states_finish - get_states_start
+                # logger.info(f"{int(delta*1000)} ms to SELECT * FROM current_states")
+                return states  # type: ignore
+            else:
+                return None
 
     def insert_path(self, path: FlightPath) -> None:
         insert_path_start = time.time()
@@ -200,7 +202,7 @@ class DB:
                 return None
 
     def update_unfinished_path(
-        self, icao, old_last_update, path_travelled, new_last_update, arr_airp, dep_airp
+        self, icao: str, old_last_update: int, path_travelled: str, new_last_update: int, arr_airp: str, dep_airp: str
     ) -> None:
         update_unfinished_start = time.time()
         with self.conn.cursor() as curs:
@@ -337,8 +339,8 @@ class DB:
     def close(self) -> None:
         self.conn.close()
 
-    def __enter__(self):
+    def __enter__(self):  # type: ignore
         return self.conn.__enter__()
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore
         self.conn.__exit__(exc_type, exc_val, exc_tb)

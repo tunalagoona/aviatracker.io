@@ -22,9 +22,9 @@ def update_flight_paths() -> None:
             db.update_paths_when_finished()
         with db:
             states: Optional[List[Dict]] = db.get_current_states()
-            logger.info(f"received {len(states)} states for paths update")
 
-            if len(states) > 0:
+            if states is not None:
+                logger.info(f"received {len(states)} states for paths update")
                 for state in states:
                     icao = state["icao24"]
                     callsign = state["callsign"]
@@ -51,14 +51,14 @@ def update_flight_paths() -> None:
                             icao, last_update, path, update_time, arrival_airport_icao, departure_airport_icao
                         )
                     else:
-                        path = json.dumps([current_location])
+                        flight_path = json.dumps([current_location])
                         new_path = FlightPath(
                             last_update=update_time,
                             icao24=icao,
                             callsign=callsign,
                             departure_airport_icao=departure_airport_icao,
                             arrival_airport_icao=arrival_airport_icao,
-                            path=path,
+                            path=flight_path,
                             finished=False,
                             finished_at=0,
                         )
