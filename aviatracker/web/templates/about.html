@@ -24,15 +24,15 @@
         <img class="myfly" src="{{ url_for('static', filename='myfly_mini.png') }}" alt="MyFly">
         <h2 class="subtitle">About the project</h2>
         <div class="plain-text">
-            MyFly is a service, providing real-time access to air traffic data.
-            It uses The OpenSky Network API for retrieving information about aircraft location.
+            MyFly is a real-time open-source air traffic tracker.
+            It uses <a class="elements" href="https://opensky-network.org/apidoc/rest.html">OpenSky Network API</a> for retrieving
+            information about aircraft location.
         </div>
-        <h2 class="subtitle">Data from the OpenSky Network API </h2>
         <div class="plain-text">
             <p>As soon as a message of an airplane arrives at servers, OpenSky Network creates a record
-                for the aircraft – the so-called state vector. This state vector represents
+                for the aircraft – the so-called <b>state vector</b>. This state vector represents
                 a summary of all tracking information at a certain point in time,
-                including aircraft identity (ICAO address + call sign),
+                including aircraft identity (ICAO address + callsign),
                 time information (Unix timestamps), and spatial information (position, velocity, heading, …).</p>
             <p>All vectors represent the state of a vehicle with the interval [time−1, time].
                 If OpenSky doesn't receive any position or velocity update

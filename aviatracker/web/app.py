@@ -61,7 +61,7 @@ def send_airports(message) -> None:
     else:
         airports: Optional[List[Dict]] = fetch_airports(common_conf.db_params)
         if len(airports) != 0:
-            airports_message = ['airports', airports]
+            airports_message = ["airports", airports]
             socketio.send(airports_message)
 
 
