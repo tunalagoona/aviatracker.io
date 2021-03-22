@@ -43,7 +43,7 @@ def update_flight_paths() -> None:
                         if airports is not None:
                             arrival_airport_icao, departure_airport_icao = airports
                         else:
-                            arrival_airport_icao, departure_airport_icao = None, None
+                            arrival_airport_icao, departure_airport_icao = None, None  # type: ignore
 
                     if unfinished_path:
                         last_update = unfinished_path["last_update"]
