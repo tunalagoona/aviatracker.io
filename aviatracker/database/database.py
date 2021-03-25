@@ -1,7 +1,5 @@
-import json
 import logging
 import time
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from psycopg2 import connect, extras
@@ -17,7 +15,6 @@ from aviatracker.database import (
     OpenskyFlight,
 )
 
-from aviatracker.opensky import Opensky
 
 logger = logging.getLogger()
 
@@ -75,7 +72,6 @@ class DB:
             logger.debug(f"Inserted {len(aircraft_states)} aircraft states for the timestamp {resp_time}")
 
     def get_current_states(self) -> Optional[List[Dict]]:
-        # get_states_start = time.time()
         with self.conn.cursor() as curs:
             curs.execute("SELECT * FROM current_states")
             aircraft_states = curs.fetchall()
@@ -83,40 +79,27 @@ class DB:
             if len(aircraft_states) != 0:
                 for state in aircraft_states:
                     states.append(StateVector(*state[1:])._asdict())
-                # get_states_finish = time.time()
-                # delta = get_states_finish - get_states_start
-                # logger.info(f"{int(delta*1000)} ms to SELECT * FROM current_states")
                 return states  # type: ignore
             else:
                 return None
 
     def insert_path(self, path: FlightPath) -> None:
-        insert_path_start = time.time()
         columns_str, values_str = column_value_to_str(path._fields)
         flight_path = path._asdict()
         with self.conn.cursor() as curs:
             curs.execute(f"INSERT INTO flight_paths ({columns_str}) VALUES ({values_str})", flight_path)
-        insert_path_finish = time.time()
-        delta = insert_path_finish - insert_path_start
-        # logger.info(f"{int(delta*1000)} ms to execute insert_path")
 
     def delete_outdated_paths(self) -> None:
         """A timestamp of a record was finished is compared to the current timestamp with time zone."""
-        delete_start = time.time()
         with self.conn.cursor() as curs:
             curs.execute(
                 "DELETE FROM flight_paths "
                 "WHERE now() - to_timestamp(finished_at) > interval '5 days' AND finished_at != 0;"
             )
-            logger.info("deletion succeeded")
-            delete_finish = time.time()
-            delta = delete_finish - delete_start
-        # logger.info(f"{int(delta*1000)} ms to execute deletion")
-        # logger.info(f"delete_outdated_paths succeeded")
+            logger.debug("deletion succeeded")
 
     def update_paths_when_finished(self) -> None:
         """Updates finished and finished_at columns of flight_paths for records with no update for more then 30 min."""
-        update_paths_start = time.time()
         with self.conn.cursor() as curs:
             time_now = int(time.time())
             curs.execute(
@@ -124,10 +107,6 @@ class DB:
                 f"AND %s - last_update > 1800",
                 (time_now, time_now),
             )
-        update_paths_finish = time.time()
-        delta = update_paths_finish - update_paths_start
-        # logger.info(f"{int(delta*1000)} ms to execute update_paths_when_finished")
-        # logger.info(f"update_paths_when_finished succeeded")
 
     def upsert_callsigns(self, flights: List[OpenskyFlight]) -> None:
         for flight in flights:
@@ -162,13 +141,9 @@ class DB:
     #         return arr_airport
 
     def find_unfinished_path_for_aircraft(self, icao: str) -> Optional[Dict]:
-        unfinished_path_start = time.time()
         with self.conn.cursor() as curs:
             curs.execute("SELECT * FROM flight_paths WHERE icao24 = %s AND finished = False", (icao,))
             record = curs.fetchone()
-            unfinished_path_finish = time.time()
-            delta = unfinished_path_finish - unfinished_path_start
-            # logger.info(f"{int(delta*1000)} ms to execute find_unfinished_path_for_aircraft")
             if record:
                 record = record[1:]
                 path = FlightPath(*record)._asdict()
@@ -185,16 +160,12 @@ class DB:
     #     return longitude, latitude
 
     def get_airports_for_callsign(self, callsign: str) -> Optional[Tuple[str, str]]:
-        get_airports_start = time.time()
         with self.conn.cursor() as curs:
             curs.execute(
                 "SELECT est_arrival_airport, est_departure_airport FROM callsign_memo " "WHERE callsign = %s",
                 (callsign,),
             )
             coords = curs.fetchone()
-            get_airports_finish = time.time()
-            delta = get_airports_finish - get_airports_start
-            # logger.info(f"{int(delta*1000)} ms to execute get_airports_for_callsign")
             if coords:
                 arrival_airport, departure_airport = coords
                 return arrival_airport, departure_airport
@@ -204,7 +175,6 @@ class DB:
     def update_unfinished_path(
         self, icao: str, old_last_update: int, path_travelled: str, new_last_update: int, arr_airp: str, dep_airp: str
     ) -> None:
-        update_unfinished_start = time.time()
         with self.conn.cursor() as curs:
             if arr_airp is None and dep_airp is None:
                 curs.execute(
@@ -221,9 +191,6 @@ class DB:
                     "WHERE icao24 = %s AND last_update = %s",
                     (path_travelled, new_last_update, dep_airp, arr_airp, icao, old_last_update),
                 )
-        update_unfinished_finish = time.time()
-        delta = update_unfinished_finish - update_unfinished_start
-        # logger.info(f"{int(delta*1000)} ms to execute update_unfinished_path")
 
     def delete_outdated_stats(self) -> None:
         with self.conn.cursor() as curs:
