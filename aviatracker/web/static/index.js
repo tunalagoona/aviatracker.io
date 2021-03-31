@@ -430,7 +430,6 @@ require([
     });
 
     async function applyEditsToLayer(edits, layer) {
-        // console.log("applyEditsToLayer started");
         let results = await layer.applyEdits(edits);
         if (results.deleteFeatureResults.length > 0) {
             console.log(
@@ -439,7 +438,6 @@ require([
             );
         }
         if (results.addFeatureResults.length > 0) {
-            let add_finished = Date.now();
             let objectIds = [];
             results.addFeatureResults.forEach(function (item) {
                 objectIds.push(item.objectId);
@@ -448,13 +446,6 @@ require([
                 objectIds: objectIds
             });
             console.log(res.features.length + " object(s) have been added");
-
-            // Object.keys(res.features[0]).forEach(key => {
-            //     console.log("res.features[0][key]: " +  res.features[0][key]);
-            // })
-
-            // let time_delta = add_finished - addStarts;
-            // console.log("Time spent: " + time_delta + " ms");
         }
     }
 
@@ -630,8 +621,6 @@ require([
                 addObjects.push(graphics[icao]);
             })
         }
-
-        // console.log("addObjects length: " + addObjects.length);
         await removeFeatures(deleteObjects, featureLayer);
         await addFeatures(addObjects, featureLayer);
 
@@ -671,17 +660,9 @@ require([
     }
 
     async function renderFlight (flight, x, y) {
-        // console.log("flight:");
-        // console.log(flight);
 
         if (flight !== undefined && flight !== null) {
             let departure_airport_icao = flight.departure_airport_icao;
-            // let arrival_airport_icao = flight.arrival_airport_icao;
-
-            // console.log("flight icao: " + flight.icao24);
-            // console.log("callsign: " + flight.callsign);
-            // console.log("departure airport: " + flight.departure_airport_icao);
-            // console.log("arrival airport: " + flight.arrival_airport_icao);
 
             let traveledPath = [];
             if (flight.departure_airport_icao !== null) {
@@ -697,7 +678,6 @@ require([
                 if (features.length !== 0) {
                     let long = features[0].attributes.longitude;
                     let lat = features[0].attributes.latitude;
-                    // console.log("departure airport coords: " + [long, lat]);
                     traveledPath.push([long, lat]);
                 }
             }
@@ -742,8 +722,6 @@ require([
                 traveledPath.push([x, y]);
             }
 
-            // console.log("traveledPath: " + traveledPath);
-
             let pathGraphic = pathToGraphics(traveledPath, flight);
 
             let addObjects = [];
@@ -767,14 +745,11 @@ require([
                     drawAirports(data);
                 } else {
                     if (data[0][0] === "flight") {
-                        // console.log("received flight from the server: " + data);
                         if (data[1] !== null) {
                             renderFlight(data[1], data[2], data[3]);
                         }
                     } else {
                         if (data[0] === "path-update") {
-                            // console.log("client received path-update. Flight:");
-                            // console.log(data[1]);
                             renderFlight(data[1], null, null);
                         } else {
                             updateAircraft(data);
@@ -788,15 +763,11 @@ require([
             view.on("click", function (event) {
 
                 removeFeatures([], traveledPathFeatureLayer);
-                // removeFeatures([], remainingPathFeatureLayer);
 
                 let screenPoint = {
                     x: event.x,
                     y: event.y
                 };
-
-                // console.log("screenPoint.x before: " + screenPoint.x);
-                // console.log("screenPoint.y before: " + screenPoint.y);
 
                 view.hitTest(screenPoint).then(function (response) {
                     if (response.results.length !== 0) {
@@ -813,9 +784,6 @@ require([
                             screenPoint.x = mp.x;
                             screenPoint.y = mp.y;
 
-                            // console.log("screenPoint.x after: " + screenPoint.x);
-                            // console.log("screenPoint.y after: " + screenPoint.y);
-
                             socket.send(["icao24", icao, screenPoint.x, screenPoint.y])
                         }
                     }
@@ -828,11 +796,9 @@ require([
             let features = results.features;
 
             if (features.length !== 0) {
-                // console.log("time interval update");
-                // console.log(features[0].geometry.paths);
                 let icao = features[0].attributes.icao24;
                 let message = ["path-update", icao]
-                socket.send(["path-update", icao]);
+                socket.send(message);
             }
         }
 
