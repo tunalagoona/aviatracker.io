@@ -2,21 +2,21 @@ FROM ubuntu:18.04
 
 WORKDIR /aviatracker.io
 
-RUN apt-get update && apt-get install -y python3 python3-pip
-RUN apt-get update && apt-get install -y libpq-dev
-RUN apt-get update && apt-get install -y iputils-ping
-RUN apt-get update && apt-get install -y vim
-RUN apt-get update && apt-get install -y curl
-
-RUN apt-get update && apt-get install -y curl gnupg
-RUN apt-get update && apt-get install -y apt-transport-https
-RUN apt-get update && apt-get install -y --fix-missing rabbitmq-server
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    libpq-dev \
+    iputils-ping \
+    vim \
+    curl \
+    gnupg \
+    apt-transport-https
+RUN apt-get install -y --fix-missing rabbitmq-server
 
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
-RUN mkdir logs
-RUN mkdir beat
+RUN mkdir logs beat
 
 COPY aviatracker aviatracker
 COPY logging.yaml .
